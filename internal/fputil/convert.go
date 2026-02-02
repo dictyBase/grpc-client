@@ -18,7 +18,7 @@ func ToEither[ERR, A any](ioe IOE.IOEither[ERR, A]) E.Either[ERR, A] {
 
 // TruncateWords truncates a string to the specified number of words.
 // Pure function using O.Fold to avoid if statements.
-func TruncateWords(s string, maxWords int) string {
+var TruncateWords = F.Curry2(func(maxWords int, s string) string {
 	words := strings.Fields(s)
 
 	// Use Option monad to handle empty/short cases
@@ -34,4 +34,4 @@ func TruncateWords(s string, maxWords int) string {
 			},
 		),
 	)
-}
+})
