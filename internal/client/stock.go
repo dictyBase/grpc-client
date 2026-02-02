@@ -120,6 +120,7 @@ func ListPlasmids(_ context.Context, cmd *cli.Command) error {
 		return result.F1
 	}
 
+	fmt.Printf(">>> total  %d records <<<\n", len(result.F2))
 	for _, p := range result.F2 {
 		fmt.Println(aggregation.FormatPlasmidRecord(p))
 	}
