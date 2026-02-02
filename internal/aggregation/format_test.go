@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/aggregation"
+	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/domain"
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/fputil"
-	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,14 +44,14 @@ func TestTruncateWords(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := fputil.TruncateWords(tt.input, tt.maxWords)
+			result := fputil.TruncateWords(tt.maxWords)(tt.input)
 			require.Equal(t, tt.expected, result)
 		})
 	}
 }
 
 func TestFormatPlasmidRecord(t *testing.T) {
-	p := types.PlasmidResult{
+	p := domain.PlasmidResult{
 		ID:      "DBP0000001",
 		Name:    "pDV-CFPC-5Hyg",
 		Summary: "This is a test plasmid",

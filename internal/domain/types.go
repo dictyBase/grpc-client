@@ -1,4 +1,4 @@
-package types
+package domain
 
 import (
 	IOE "github.com/IBM/fp-go/v2/ioeither"

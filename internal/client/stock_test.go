@@ -4,108 +4,68 @@ import (
 	"testing"
 
 	stockpb "github.com/dictyBase/go-genproto/dictybaseapis/stock"
-	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/types"
+	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/domain"
 	"github.com/stretchr/testify/require"
 )
+
+func makeTestPlasmid(id, name, summary string) *stockpb.PlasmidCollection_Data {
+	return &stockpb.PlasmidCollection_Data{
+		Id: id,
+		Attributes: &stockpb.PlasmidAttributes{
+			Name:    name,
+			Summary: summary,
+		},
+	}
+}
 
 func TestToPlasmidResults(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    *stockpb.PlasmidCollection
-		expected []types.PlasmidResult
+		expected []domain.PlasmidResult
 	}{
 		{
 			name: "empty collection",
 			input: &stockpb.PlasmidCollection{
 				Data: []*stockpb.PlasmidCollection_Data{},
 			},
-			expected: []types.PlasmidResult{},
+			expected: []domain.PlasmidResult{},
 		},
 		{
 			name: "single plasmid",
 			input: &stockpb.PlasmidCollection{
 				Data: []*stockpb.PlasmidCollection_Data{
-					{
-						Id: "plas001",
-						Attributes: &stockpb.PlasmidAttributes{
-							Name:    "TestPlasmid",
-							Summary: "A test plasmid",
-						},
-					},
+					makeTestPlasmid("plas001", "TestPlasmid", "A test plasmid"),
 				},
 			},
-			expected: []types.PlasmidResult{
-				{
-					ID:      "plas001",
-					Name:    "TestPlasmid",
-					Summary: "A test plasmid",
-				},
+			expected: []domain.PlasmidResult{
+				{ID: "plas001", Name: "TestPlasmid", Summary: "A test plasmid"},
 			},
 		},
 		{
 			name: "multiple plasmids",
 			input: &stockpb.PlasmidCollection{
 				Data: []*stockpb.PlasmidCollection_Data{
-					{
-						Id: "plas001",
-						Attributes: &stockpb.PlasmidAttributes{
-							Name:    "Plasmid1",
-							Summary: "First plasmid",
-						},
-					},
-					{
-						Id: "plas002",
-						Attributes: &stockpb.PlasmidAttributes{
-							Name:    "Plasmid2",
-							Summary: "Second plasmid",
-						},
-					},
-					{
-						Id: "plas003",
-						Attributes: &stockpb.PlasmidAttributes{
-							Name:    "Plasmid3",
-							Summary: "Third plasmid",
-						},
-					},
+					makeTestPlasmid("plas001", "Plasmid1", "First plasmid"),
+					makeTestPlasmid("plas002", "Plasmid2", "Second plasmid"),
+					makeTestPlasmid("plas003", "Plasmid3", "Third plasmid"),
 				},
 			},
-			expected: []types.PlasmidResult{
-				{
-					ID:      "plas001",
-					Name:    "Plasmid1",
-					Summary: "First plasmid",
-				},
-				{
-					ID:      "plas002",
-					Name:    "Plasmid2",
-					Summary: "Second plasmid",
-				},
-				{
-					ID:      "plas003",
-					Name:    "Plasmid3",
-					Summary: "Third plasmid",
-				},
+			expected: []domain.PlasmidResult{
+				{ID: "plas001", Name: "Plasmid1", Summary: "First plasmid"},
+				{ID: "plas002", Name: "Plasmid2", Summary: "Second plasmid"},
+				{ID: "plas003", Name: "Plasmid3", Summary: "Third plasmid"},
 			},
 		},
 		{
 			name: "plasmids with empty summary",
 			input: &stockpb.PlasmidCollection{
 				Data: []*stockpb.PlasmidCollection_Data{
-					{
-						Id: "plas004",
-						Attributes: &stockpb.PlasmidAttributes{
-							Name:    "NoSummaryPlasmid",
-							Summary: "",
-						},
-					},
+					makeTestPlasmid("plas004", "NoSummaryPlasmid", ""),
 				},
 			},
-			expected: []types.PlasmidResult{
-				{
-					ID:      "plas004",
-					Name:    "NoSummaryPlasmid",
-					Summary: "",
-				},
+			expected: []domain.PlasmidResult{
+				{ID: "plas004", Name: "NoSummaryPlasmid", Summary: ""},
 			},
 		},
 	}

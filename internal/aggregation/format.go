@@ -3,14 +3,16 @@ package aggregation
 import (
 	"fmt"
 
+	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/domain"
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/fputil"
-	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/types"
 )
 
-var trun30words = fputil.TruncateWords(30)
+const MaxSummaryWords = 30
+
+var trun30words = fputil.TruncateWords(MaxSummaryWords)
 
 // FormatPlasmidRecord formats a single plasmid result as a display string.
-func FormatPlasmidRecord(p types.PlasmidResult) string {
+func FormatPlasmidRecord(p domain.PlasmidResult) string {
 	return fmt.Sprintf(
 		"ID: %s | Name: %s | Summary: %s",
 		p.ID,

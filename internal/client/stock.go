@@ -13,8 +13,8 @@ import (
 	T "github.com/IBM/fp-go/v2/tuple"
 	stockpb "github.com/dictyBase/go-genproto/dictybaseapis/stock"
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/aggregation"
+	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/domain"
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/fputil"
-	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/types"
 	"github.com/urfave/cli/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -22,7 +22,7 @@ import (
 
 // createConnection creates a gRPC connection
 func createConnection(
-	cfg types.ListPlasmidsConfig,
+	cfg domain.ListPlasmidsConfig,
 ) IOE.IOEither[error, *grpc.ClientConn] {
 	return IOE.TryCatchError(func() (*grpc.ClientConn, error) {
 		return grpc.NewClient(
@@ -34,12 +34,12 @@ func createConnection(
 
 // createWithConnection enriches config with a gRPC connection.
 func createWithConnection(
-	cfg types.ListPlasmidsConfig,
-) IOE.IOEither[error, types.WithConnection] {
+	cfg domain.ListPlasmidsConfig,
+) IOE.IOEither[error, domain.WithConnection] {
 	return F.Pipe1(
 		createConnection(cfg),
-		IOE.Map[error](func(conn *grpc.ClientConn) types.WithConnection {
-			return types.WithConnection{
+		IOE.Map[error](func(conn *grpc.ClientConn) domain.WithConnection {
+			return domain.WithConnection{
 				ListPlasmidsConfig: cfg,
 				Connection:         conn,
 			}
@@ -47,9 +47,11 @@ func createWithConnection(
 	)
 }
 
+const DefaultPlasmidLimit = 1000
+
 // callListPlasmids executes gRPC ListPlasmids call using enriched context
 func callListPlasmids(
-	ctx types.WithConnection,
+	ctx domain.WithConnection,
 ) IOE.IOEither[error, *stockpb.PlasmidCollection] {
 	return F.Pipe1(
 		IOE.TryCatchError(func() (*stockpb.PlasmidCollection, error) {
@@ -57,7 +59,7 @@ func callListPlasmids(
 			return stockpb.NewStockServiceClient(ctx.Connection).
 				ListPlasmids(context.Background(),
 					&stockpb.StockParameters{
-						Limit:  1000,
+						Limit:  DefaultPlasmidLimit,
 						Filter: ctx.Filter,
 					})
 		}),
@@ -70,11 +72,11 @@ func callListPlasmids(
 // ToPlasmidResults converts protobuf collection to domain results
 func ToPlasmidResults(
 	collection *stockpb.PlasmidCollection,
-) []types.PlasmidResult {
+) []domain.PlasmidResult {
 	return F.Pipe1(
 		collection.Data,
-		A.Map(func(p *stockpb.PlasmidCollection_Data) types.PlasmidResult {
-			return types.PlasmidResult{
+		A.Map(func(p *stockpb.PlasmidCollection_Data) domain.PlasmidResult {
+			return domain.PlasmidResult{
 				ID:      p.Id,
 				Name:    p.Attributes.GetName(),
 				Summary: p.Attributes.GetSummary(),
@@ -85,30 +87,30 @@ func ToPlasmidResults(
 
 // ListPlasmids implements the main pipeline for listing plasmids
 // It serves as the CLI Action runner
-func ListPlasmids(ctx context.Context, cmd *cli.Command) error {
+func ListPlasmids(_ context.Context, cmd *cli.Command) error {
 	result := F.Pipe7(
-		IOE.Of[error](types.ListPlasmidsConfig{
+		IOE.Of[error](domain.ListPlasmidsConfig{
 			ServerAddr: cmd.String("host"),
 			Port:       cmd.String("port"),
 			Filter:     "summary=~GoldenBraid",
 		}),
 		IOE.ChainFirstIOK[error](
-			IO.Logf[types.ListPlasmidsConfig](
+			IO.Logf[domain.ListPlasmidsConfig](
 				"Starting plasmid listing: %+v",
 			),
 		),
 		IOE.Chain(createWithConnection),
-		IOE.MapLeft[types.WithConnection](
+		IOE.MapLeft[domain.WithConnection](
 			fperrors.OnError("failed to create connection"),
 		),
 		IOE.Chain(callListPlasmids),
 		IOE.Map[error](ToPlasmidResults),
-		fputil.ToEither[error, []types.PlasmidResult],
+		fputil.ToEither[error, []domain.PlasmidResult],
 		E.Fold(
-			func(err error) T.Tuple2[error, []types.PlasmidResult] {
-				return T.MakeTuple2(err, []types.PlasmidResult(nil))
+			func(err error) T.Tuple2[error, []domain.PlasmidResult] {
+				return T.MakeTuple2(err, []domain.PlasmidResult(nil))
 			},
-			func(data []types.PlasmidResult) T.Tuple2[error, []types.PlasmidResult] {
+			func(data []domain.PlasmidResult) T.Tuple2[error, []domain.PlasmidResult] {
 				return T.MakeTuple2[error](nil, data)
 			},
 		),
