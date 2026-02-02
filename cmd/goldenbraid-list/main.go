@@ -25,7 +25,7 @@ func main() {
 				Value: "9560",
 			},
 		},
-		Action: client.RunListPlasmids,
+		Action: client.ListPlasmids,
 	}
 
 	if err := app.Run(context.Background(), os.Args); err != nil {

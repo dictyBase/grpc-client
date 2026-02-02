@@ -10,6 +10,7 @@ import (
 	F "github.com/IBM/fp-go/v2/function"
 	IO "github.com/IBM/fp-go/v2/io"
 	IOE "github.com/IBM/fp-go/v2/ioeither"
+	T "github.com/IBM/fp-go/v2/tuple"
 	stockpb "github.com/dictyBase/go-genproto/dictybaseapis/stock"
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/aggregation"
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/fputil"
@@ -84,8 +85,8 @@ func ToPlasmidResults(
 
 // ListPlasmids implements the main pipeline for listing plasmids
 // It serves as the CLI Action runner
-func RunListPlasmids(ctx context.Context, cmd *cli.Command) error {
-	return F.Pipe8(
+func ListPlasmids(ctx context.Context, cmd *cli.Command) error {
+	result := F.Pipe7(
 		IOE.Of[error](types.ListPlasmidsConfig{
 			ServerAddr: cmd.String("host"),
 			Port:       cmd.String("port"),
@@ -102,11 +103,24 @@ func RunListPlasmids(ctx context.Context, cmd *cli.Command) error {
 		),
 		IOE.Chain(callListPlasmids),
 		IOE.Map[error](ToPlasmidResults),
-		IOE.ChainFirstIOK[error](aggregation.PrintResults),
 		fputil.ToEither[error, []types.PlasmidResult],
 		E.Fold(
-			func(err error) error { return err },
-			func(_ []types.PlasmidResult) error { return nil },
+			func(err error) T.Tuple2[error, []types.PlasmidResult] {
+				return T.MakeTuple2(err, []types.PlasmidResult(nil))
+			},
+			func(data []types.PlasmidResult) T.Tuple2[error, []types.PlasmidResult] {
+				return T.MakeTuple2[error](nil, data)
+			},
 		),
 	)
+
+	if result.F1 != nil {
+		return result.F1
+	}
+
+	for _, p := range result.F2 {
+		fmt.Println(aggregation.FormatPlasmidRecord(p))
+	}
+
+	return nil
 }
