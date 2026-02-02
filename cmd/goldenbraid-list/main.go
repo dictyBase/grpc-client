@@ -15,14 +15,21 @@ func main() {
 		Usage: "List GoldenBraid plasmids from stock API",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:  "host",
-				Usage: "gRPC server host address",
-				Value: "localhost",
+				Name:    "host",
+				Usage:   "gRPC server host address",
+				Value:   "stock-api",
+				Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
 			},
 			&cli.StringFlag{
-				Name:  "port",
-				Usage: "gRPC server port",
-				Value: "9560",
+				Name:    "port",
+				Usage:   "gRPC server port",
+				Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
+			},
+			&cli.StringFlag{
+				Name:    "filter",
+				Usage:   "Filter string for the stock API",
+				Value:   "summary=~GoldenBraid",
+				Sources: cli.EnvVars("STOCK_API_FILTER"),
 			},
 		},
 		Action: client.ListPlasmids,

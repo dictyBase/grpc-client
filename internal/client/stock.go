@@ -92,7 +92,7 @@ func ListPlasmids(_ context.Context, cmd *cli.Command) error {
 		IOE.Of[error](domain.ListPlasmidsConfig{
 			ServerAddr: cmd.String("host"),
 			Port:       cmd.String("port"),
-			Filter:     "summary=~GoldenBraid",
+			Filter:     cmd.String("filter"),
 		}),
 		IOE.ChainFirstIOK[error](
 			IO.Logf[domain.ListPlasmidsConfig](
