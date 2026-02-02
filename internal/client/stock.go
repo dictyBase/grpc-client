@@ -5,18 +5,21 @@ import (
 	"fmt"
 
 	A "github.com/IBM/fp-go/v2/array"
+	E "github.com/IBM/fp-go/v2/either"
 	fperrors "github.com/IBM/fp-go/v2/errors"
 	F "github.com/IBM/fp-go/v2/function"
+	IO "github.com/IBM/fp-go/v2/io"
 	IOE "github.com/IBM/fp-go/v2/ioeither"
 	stockpb "github.com/dictyBase/go-genproto/dictybaseapis/stock"
+	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/aggregation"
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/fputil"
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/types"
+	"github.com/urfave/cli/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 // createConnection creates a gRPC connection
-// Pure IOEither - no imperative error handling
 func createConnection(
 	cfg types.ListPlasmidsConfig,
 ) IOE.IOEither[error, *grpc.ClientConn] {
@@ -26,6 +29,21 @@ func createConnection(
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
 		)
 	})
+}
+
+// createWithConnection enriches config with a gRPC connection.
+func createWithConnection(
+	cfg types.ListPlasmidsConfig,
+) IOE.IOEither[error, types.WithConnection] {
+	return F.Pipe1(
+		createConnection(cfg),
+		IOE.Map[error](func(conn *grpc.ClientConn) types.WithConnection {
+			return types.WithConnection{
+				ListPlasmidsConfig: cfg,
+				Connection:         conn,
+			}
+		}),
+	)
 }
 
 // callListPlasmids executes gRPC ListPlasmids call using enriched context
@@ -48,29 +66,11 @@ func callListPlasmids(
 	)
 }
 
-// ListPlasmids fetches plasmids using IOE.Map to enrich context
-func ListPlasmids(cfg types.ListPlasmidsConfig) types.CollectionIOE {
-	return F.Pipe3(
-		createConnection(cfg),
-		IOE.MapLeft[*grpc.ClientConn](
-			fperrors.OnError("failed to create connection"),
-		),
-		IOE.Map[error](func(conn *grpc.ClientConn) types.WithConnection {
-			return types.WithConnection{
-				ListPlasmidsConfig: cfg,
-				Connection:         conn,
-			}
-		}),
-		IOE.Chain(callListPlasmids),
-	)
-}
-
 // ToPlasmidResults converts protobuf collection to domain results
-// Uses A.Map for array transformation (fp-go pattern)
 func ToPlasmidResults(
 	collection *stockpb.PlasmidCollection,
-) []string {
-	return F.Pipe2(
+) []types.PlasmidResult {
+	return F.Pipe1(
 		collection.Data,
 		A.Map(func(p *stockpb.PlasmidCollection_Data) types.PlasmidResult {
 			return types.PlasmidResult{
@@ -79,13 +79,34 @@ func ToPlasmidResults(
 				Summary: p.Attributes.GetSummary(),
 			}
 		}),
-		A.Map(FormatPlasmidRecord),
 	)
 }
 
-// FormatPlasmidRecord formats a single plasmid result as a display string.
-// Pure function - no side effects.
-func FormatPlasmidRecord(p types.PlasmidResult) string {
-	summary := fputil.TruncateWords(p.Summary, 30)
-	return fmt.Sprintf("ID: %s | Name: %s | Summary: %s", p.ID, p.Name, summary)
+// ListPlasmids implements the main pipeline for listing plasmids
+// It serves as the CLI Action runner
+func RunListPlasmids(ctx context.Context, cmd *cli.Command) error {
+	return F.Pipe8(
+		IOE.Of[error](types.ListPlasmidsConfig{
+			ServerAddr: cmd.String("host"),
+			Port:       cmd.String("port"),
+			Filter:     "summary=~GoldenBraid",
+		}),
+		IOE.ChainFirstIOK[error](
+			IO.Logf[types.ListPlasmidsConfig](
+				"Starting plasmid listing: %+v",
+			),
+		),
+		IOE.Chain(createWithConnection),
+		IOE.MapLeft[types.WithConnection](
+			fperrors.OnError("failed to create connection"),
+		),
+		IOE.Chain(callListPlasmids),
+		IOE.Map[error](ToPlasmidResults),
+		IOE.ChainFirstIOK[error](aggregation.PrintResults),
+		fputil.ToEither[error, []types.PlasmidResult],
+		E.Fold(
+			func(err error) error { return err },
+			func(_ []types.PlasmidResult) error { return nil },
+		),
+	)
 }
