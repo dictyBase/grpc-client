@@ -10,29 +10,43 @@ import (
 )
 
 func main() {
+	sharedFlags := []cli.Flag{
+		&cli.StringFlag{
+			Name:    "host",
+			Usage:   "gRPC server host address",
+			Value:   "stock-api",
+			Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
+		},
+		&cli.StringFlag{
+			Name:    "port",
+			Usage:   "gRPC server port",
+			Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
+		},
+	}
+
 	app := &cli.Command{
 		Name:  "goldenbraid-list",
 		Usage: "List GoldenBraid plasmids from stock API",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:    "host",
-				Usage:   "gRPC server host address",
-				Value:   "stock-api",
-				Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
-			},
-			&cli.StringFlag{
-				Name:    "port",
-				Usage:   "gRPC server port",
-				Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
-			},
-			&cli.StringFlag{
-				Name:    "filter",
-				Usage:   "Filter string for the stock API",
-				Value:   "summary=~GoldenBraid",
-				Sources: cli.EnvVars("STOCK_API_FILTER"),
+		Flags: append(sharedFlags, &cli.StringFlag{
+			Name:    "filter",
+			Usage:   "Filter string for the stock API",
+			Value:   "summary=~GoldenBraid",
+			Sources: cli.EnvVars("STOCK_API_FILTER"),
+		}),
+		Action: client.ListPlasmids,
+		Commands: []*cli.Command{
+			{
+				Name:  "lookup",
+				Usage: "Look up a GoldenBraid plasmid by exact name",
+				Flags: append(sharedFlags, &cli.StringFlag{
+					Name:     "name",
+					Usage:    "Exact plasmid name to look up (e.g. pDGB3alpha1)",
+					Required: true,
+					Sources:  cli.EnvVars("PLASMID_NAME"),
+				}),
+				Action: client.LookupPlasmidByName,
 			},
 		},
-		Action: client.ListPlasmids,
 	}
 
 	if err := app.Run(context.Background(), os.Args); err != nil {
