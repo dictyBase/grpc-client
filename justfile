@@ -4,6 +4,7 @@ name := "goldenbraid-list"
 namespace := "dictybase"
 github_user := "sba964"
 platform := "linux/amd64"
+platform_multi := "linux/amd64,linux/arm64"
 
 image := namespace + "/" + name
 ghcr_image := "ghcr.io/" + image
@@ -25,6 +26,40 @@ push-ghcr tag="latest":
     echo $GITHUB_REGISTRY_TOKEN | docker login ghcr.io -u {{github_user}} --password-stdin
     docker buildx build --platform {{platform}} -t {{ghcr_image}}:{{tag}} --push .
 
+# Push multi-arch image (amd64 + arm64) to GitHub Container Registry
+push-ghcr-multi tag="latest":
+    echo $GITHUB_REGISTRY_TOKEN | docker login ghcr.io -u {{github_user}} --password-stdin
+    docker buildx build --platform {{platform_multi}} -t {{ghcr_image}}:{{tag}} --push .
+
 # List images
 list:
     docker images | grep {{image}}
+
+# Look up a GoldenBraid plasmid by exact name in dev cluster
+run-lookup tag name:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export KUBECONFIG=$(k3d kubeconfig write k3d-dev-cluster)
+    kubectl apply -f - <<EOF
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      name: goldenbraid-lookup
+      namespace: dev
+    spec:
+      ttlSecondsAfterFinished: 120
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: goldenbraid-lookup
+              image: {{ghcr_image}}:{{tag}}
+              env:
+                - name: PLASMID_NAME
+                  value: "{{name}}"
+              envFrom:
+                - secretRef:
+                    name: minio
+              args:
+                - lookup
+    EOF
