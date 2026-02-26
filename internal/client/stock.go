@@ -85,15 +85,19 @@ func ToPlasmidResults(
 	)
 }
 
-// ListPlasmids implements the main pipeline for listing plasmids
-// It serves as the CLI Action runner
-func ListPlasmids(_ context.Context, cmd *cli.Command) error {
+// printPlasmidResults prints the plasmid results to stdout.
+func printPlasmidResults(results []domain.PlasmidResult) {
+	lines := F.Pipe1(results, A.Map(aggregation.FormatPlasmidRecord))
+	fmt.Printf(">>> total %d records <<<\n", len(results))
+	for _, line := range lines {
+		fmt.Println(line)
+	}
+}
+
+// runPlasmidList executes the full pipeline for a given config and prints results.
+func runPlasmidList(cfg domain.ListPlasmidsConfig) error {
 	result := F.Pipe7(
-		IOE.Of[error](domain.ListPlasmidsConfig{
-			ServerAddr: cmd.String("host"),
-			Port:       cmd.String("port"),
-			Filter:     cmd.String("filter"),
-		}),
+		IOE.Of[error](cfg),
 		IOE.ChainFirstIOK[error](
 			IO.Logf[domain.ListPlasmidsConfig](
 				"Starting plasmid listing: %+v",
@@ -120,10 +124,26 @@ func ListPlasmids(_ context.Context, cmd *cli.Command) error {
 		return result.F1
 	}
 
-	fmt.Printf(">>> total  %d records <<<\n", len(result.F2))
-	for _, p := range result.F2 {
-		fmt.Println(aggregation.FormatPlasmidRecord(p))
-	}
+	printPlasmidResults(result.F2)
 
 	return nil
+}
+
+// ListPlasmids implements the main pipeline for listing plasmids
+// It serves as the CLI Action runner
+func ListPlasmids(_ context.Context, cmd *cli.Command) error {
+	return runPlasmidList(domain.ListPlasmidsConfig{
+		ServerAddr: cmd.String("host"),
+		Port:       cmd.String("port"),
+		Filter:     cmd.String("filter"),
+	})
+}
+
+// LookupPlasmidByName looks up a plasmid by exact name using the plasmid_name filter.
+func LookupPlasmidByName(_ context.Context, cmd *cli.Command) error {
+	return runPlasmidList(domain.ListPlasmidsConfig{
+		ServerAddr: cmd.String("host"),
+		Port:       cmd.String("port"),
+		Filter:     fmt.Sprintf("plasmid_name===%s", cmd.String("name")),
+	})
 }
