@@ -14,7 +14,6 @@ func main() {
 		&cli.StringFlag{
 			Name:    "host",
 			Usage:   "gRPC server host address",
-			Value:   "stock-api",
 			Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
 		},
 		&cli.StringFlag{
