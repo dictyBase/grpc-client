@@ -54,12 +54,11 @@ run-lookup tag name:
           containers:
             - name: goldenbraid-lookup
               image: {{ghcr_image}}:{{tag}}
-              env:
-                - name: PLASMID_NAME
-                  value: "{{name}}"
               envFrom:
                 - secretRef:
                     name: minio
               args:
                 - lookup
+                - --name
+                - "{{name}}"
     EOF
