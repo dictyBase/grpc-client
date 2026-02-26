@@ -59,7 +59,7 @@ func callListPlasmids(
 			return stockpb.NewStockServiceClient(ctx.Connection).
 				ListPlasmids(context.Background(),
 					&stockpb.StockParameters{
-						Limit:  DefaultPlasmidLimit,
+						Limit:  ctx.Limit,
 						Filter: ctx.Filter,
 					})
 		}),
@@ -136,6 +136,7 @@ func ListPlasmids(_ context.Context, cmd *cli.Command) error {
 		ServerAddr: cmd.String("host"),
 		Port:       cmd.String("port"),
 		Filter:     cmd.String("filter"),
+		Limit:      DefaultPlasmidLimit,
 	})
 }
 
@@ -145,5 +146,6 @@ func LookupPlasmidByName(_ context.Context, cmd *cli.Command) error {
 		ServerAddr: cmd.String("host"),
 		Port:       cmd.String("port"),
 		Filter:     fmt.Sprintf("plasmid_name===%s", cmd.String("name")),
+		Limit:      1,
 	})
 }
