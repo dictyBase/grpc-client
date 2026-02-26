@@ -55,7 +55,6 @@ func main() {
 						Name:     "name",
 						Usage:    "Exact plasmid name to look up (e.g. pDGB3alpha1)",
 						Required: true,
-						Sources:  cli.EnvVars("PLASMID_NAME"),
 					},
 				},
 				Action: client.LookupPlasmidByName,
