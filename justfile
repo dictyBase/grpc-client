@@ -47,7 +47,7 @@ run-lookup tag name:
       name: goldenbraid-lookup
       namespace: dev
     spec:
-      ttlSecondsAfterFinished: 60
+      ttlSecondsAfterFinished: 200
       template:
         spec:
           restartPolicy: Never
