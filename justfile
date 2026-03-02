@@ -35,6 +35,31 @@ push-ghcr-multi tag="latest":
 list:
     docker images | grep {{image}}
 
+# List GoldenBraid plasmids in dev cluster
+run-bad-list tag filter="summary=~GoldenBraid":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export KUBECONFIG=$(k3d kubeconfig write k3d-dev-cluster)
+    kubectl apply -f - <<EOF
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      generateName: goldenbraid-list-
+      namespace: dev
+    spec:
+      ttlSecondsAfterFinished: 200
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: goldenbraid-list
+              image: {{ghcr_image}}:{{tag}}
+              args:
+                - list
+                - --filter
+                - "{{filter}}"
+    EOF
+
 # Look up a GoldenBraid plasmid by exact name in dev cluster
 run-lookup tag name:
     #!/usr/bin/env bash
@@ -44,7 +69,7 @@ run-lookup tag name:
     apiVersion: batch/v1
     kind: Job
     metadata:
-      name: goldenbraid-lookup
+      generateName: goldenbraid-lookup-
       namespace: dev
     spec:
       ttlSecondsAfterFinished: 200
@@ -54,9 +79,6 @@ run-lookup tag name:
           containers:
             - name: goldenbraid-lookup
               image: {{ghcr_image}}:{{tag}}
-              envFrom:
-                - secretRef:
-                    name: minio
               args:
                 - lookup
                 - --name
