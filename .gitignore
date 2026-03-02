@@ -3,3 +3,4 @@ STOCK_API_OVERVIEW.md
 TASK_5_COMPLETION.md
 coverage.out
 .tool-versions
+.beads/hooks/prepare-commit-msg
