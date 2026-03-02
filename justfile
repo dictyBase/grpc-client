@@ -36,7 +36,7 @@ list:
     docker images | grep {{image}}
 
 # List GoldenBraid plasmids in dev cluster
-run-bad-list tag filter="summary=~GoldenBraid":
+run-list tag filter="summary=~GoldenBraid":
     #!/usr/bin/env bash
     set -euo pipefail
     export KUBECONFIG=$(k3d kubeconfig write k3d-dev-cluster)
