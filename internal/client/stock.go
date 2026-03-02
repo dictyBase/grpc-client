@@ -146,7 +146,7 @@ func LookupPlasmidByName(_ context.Context, cmd *cli.Command) error {
 		ServerAddr: cmd.String("host"),
 		Port:       cmd.String("port"),
 		Filter:     fmt.Sprintf("plasmid_name===%s", cmd.String("name")),
-		Limit:      1,
+		Limit:      10,
 	})
 }
 
@@ -164,19 +164,22 @@ func callListPlasmidsLoop(
 		var allResults []domain.PlasmidResult
 		cursor := int64(0)
 		client := stockpb.NewStockServiceClient(ctx.Connection)
-
 		for {
-			coll, err := client.ListPlasmids(context.Background(), &stockpb.StockParameters{
-				Limit:  ctx.Limit,
-				Cursor: cursor,
-				Filter: ctx.Filter,
-			})
+			coll, err := client.ListPlasmids(
+				context.Background(),
+				&stockpb.StockParameters{
+					Limit:  ctx.Limit,
+					Cursor: cursor,
+				},
+			)
 			if err != nil {
-				return nil, fmt.Errorf("failed to list plasmids batch: %w", err)
+				return nil, fmt.Errorf(
+					"failed to list plasmids batch: %w",
+					err,
+				)
 			}
 
 			allResults = append(allResults, ToPlasmidResults(coll)...)
-
 			if coll.Meta == nil || coll.Meta.NextCursor == 0 {
 				break
 			}
