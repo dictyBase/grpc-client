@@ -40,7 +40,7 @@ run-list tag filter="summary=~GoldenBraid":
     #!/usr/bin/env bash
     set -euo pipefail
     export KUBECONFIG=$(k3d kubeconfig write k3d-dev-cluster)
-    kubectl apply -f - <<EOF
+    kubectl create -f - <<EOF
     apiVersion: batch/v1
     kind: Job
     metadata:
@@ -65,7 +65,7 @@ run-lookup tag name:
     #!/usr/bin/env bash
     set -euo pipefail
     export KUBECONFIG=$(k3d kubeconfig write k3d-dev-cluster)
-    kubectl apply -f - <<EOF
+    kubectl create -f - <<EOF
     apiVersion: batch/v1
     kind: Job
     metadata:
