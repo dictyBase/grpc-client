@@ -18,6 +18,7 @@ type ListPlasmidsConfig struct {
 	Port       string
 	Filter     string
 	Limit      int64
+	Cursor     int64
 }
 
 // WithConnection enriches ListPlasmidsConfig with gRPC connection

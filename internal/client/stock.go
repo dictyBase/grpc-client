@@ -149,3 +149,98 @@ func LookupPlasmidByName(_ context.Context, cmd *cli.Command) error {
 		Limit:      1,
 	})
 }
+
+const (
+	TopRecordsLimit = 10
+	BatchFetchLimit = 30
+)
+
+// callListPlasmidsLoop executes gRPC ListPlasmids calls in a loop using enriched context.
+func callListPlasmidsLoop(
+	ctx domain.WithConnection,
+) IOE.IOEither[error, []domain.PlasmidResult] {
+	return IOE.TryCatchError(func() ([]domain.PlasmidResult, error) {
+		defer ctx.Connection.Close()
+		var allResults []domain.PlasmidResult
+		cursor := int64(0)
+		client := stockpb.NewStockServiceClient(ctx.Connection)
+
+		for {
+			coll, err := client.ListPlasmids(context.Background(), &stockpb.StockParameters{
+				Limit:  ctx.Limit,
+				Cursor: cursor,
+				Filter: ctx.Filter,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to list plasmids batch: %w", err)
+			}
+
+			allResults = append(allResults, ToPlasmidResults(coll)...)
+
+			if coll.Meta == nil || coll.Meta.NextCursor == 0 {
+				break
+			}
+			cursor = coll.Meta.NextCursor
+		}
+
+		return allResults, nil
+	})
+}
+
+// printTop10PlasmidResults prints up to the top 10 plasmid results and shows total count.
+func printTop10PlasmidResults(results []domain.PlasmidResult) {
+	fmt.Printf(">>> total %d records retrieved <<<\n", len(results))
+	top := results
+	if len(top) > TopRecordsLimit {
+		top = top[:TopRecordsLimit]
+	}
+	lines := F.Pipe1(top, A.Map(aggregation.FormatPlasmidRecord))
+	for _, line := range lines {
+		fmt.Println(line)
+	}
+}
+
+// runAllPlasmidList executes the full pipeline for listing all plasmids paginated.
+func runAllPlasmidList(cfg domain.ListPlasmidsConfig) error {
+	result := F.Pipe6(
+		IOE.Of[error](cfg),
+		IOE.ChainFirstIOK[error](
+			IO.Logf[domain.ListPlasmidsConfig](
+				"Starting paginated plasmid listing: %+v",
+			),
+		),
+		IOE.Chain(createWithConnection),
+		IOE.MapLeft[domain.WithConnection](
+			fperrors.OnError("failed to create connection"),
+		),
+		IOE.Chain(callListPlasmidsLoop),
+		fputil.ToEither[error, []domain.PlasmidResult],
+		E.Fold(
+			func(err error) T.Tuple2[error, []domain.PlasmidResult] {
+				return T.MakeTuple2(err, []domain.PlasmidResult(nil))
+			},
+			func(data []domain.PlasmidResult) T.Tuple2[error, []domain.PlasmidResult] {
+				return T.MakeTuple2[error](nil, data)
+			},
+		),
+	)
+
+	if result.F1 != nil {
+		return result.F1
+	}
+
+	printTop10PlasmidResults(result.F2)
+
+	return nil
+}
+
+// ListAllPlasmids implements the main pipeline for listing all plasmids paginated
+// It serves as the CLI Action runner
+func ListAllPlasmids(_ context.Context, cmd *cli.Command) error {
+	return runAllPlasmidList(domain.ListPlasmidsConfig{
+		ServerAddr: cmd.String("host"),
+		Port:       cmd.String("port"),
+		Filter:     "",
+		Limit:      BatchFetchLimit,
+	})
+}
