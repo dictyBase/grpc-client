@@ -146,13 +146,14 @@ func LookupPlasmidByName(_ context.Context, cmd *cli.Command) error {
 		ServerAddr: cmd.String("host"),
 		Port:       cmd.String("port"),
 		Filter:     fmt.Sprintf("plasmid_name===%s", cmd.String("name")),
-		Limit:      10,
+		Limit:      int64(cmd.Int("limit")),
 	})
 }
 
 const (
-	TopRecordsLimit = 10
-	BatchFetchLimit = 30
+	DefaultLookupLimit = 3
+	TopRecordsLimit    = 10
+	BatchFetchLimit    = 30
 )
 
 // callListPlasmidsLoop executes gRPC ListPlasmids calls in a loop using enriched context.

@@ -73,6 +73,11 @@ func main() {
 						Usage:    "Exact plasmid name to look up (e.g. pDGB3alpha1)",
 						Required: true,
 					},
+					&cli.IntFlag{
+						Name:  "limit",
+						Usage: "Limit for the number of results",
+						Value: client.DefaultLookupLimit,
+					},
 				},
 				Action: client.LookupPlasmidByName,
 			},
