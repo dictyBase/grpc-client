@@ -86,3 +86,26 @@ run-lookup tag name limit="3":
                 - --limit
                 - "{{limit}}"
     EOF
+
+# Wait for a job to complete or fail
+wait-job name namespace="dev" timeout="60s":
+    #!/usr/bin/env bash
+    export KUBECONFIG=$(k3d kubeconfig write k3d-dev-cluster)
+    echo "Waiting for job {{name}}..."
+    kubectl wait --for=condition=complete --timeout={{timeout}} job/{{name}} -n {{namespace}} || \
+    kubectl wait --for=condition=failed --timeout={{timeout}} job/{{name}} -n {{namespace}}
+
+# Get the logs for a specific job
+job-logs name namespace="dev":
+    #!/usr/bin/env bash
+    export KUBECONFIG=$(k3d kubeconfig write k3d-dev-cluster)
+    kubectl logs job/{{name}} -n {{namespace}}
+
+# Get failure details for a job
+job-debug name namespace="dev":
+    #!/usr/bin/env bash
+    export KUBECONFIG=$(k3d kubeconfig write k3d-dev-cluster)
+    echo "--- Pod Logs ---"
+    kubectl logs job/{{name}} -n {{namespace}} || true
+    echo "--- Job Description ---"
+    kubectl describe job/{{name}} -n {{namespace}}
