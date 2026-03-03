@@ -1,4 +1,5 @@
 name: goldenbraid-k8s-lookup
+type: graph
 description: "Orchestrates a plasmid lookup job in the dev cluster."
 env:
   - TAG=latest
