@@ -52,9 +52,8 @@ func resolveState(ctx PollContext) IOE.IOEither[error, PollContext] {
 }
 
 // continueOrReturn decides whether to stop or keep polling based on ctx.State.
-//
-//	terminal state (Complete/Failed/Stuck) → return ctx as-is.
-//	Pending                                → sleep PollInterval, then recurse.
+// Terminal state (Complete/Failed/Stuck) returns ctx immediately.
+// Pending sleeps for PollInterval and recurses directly into pollUntilDone.
 func continueOrReturn(ctx PollContext) IOE.IOEither[error, PollContext] {
 	return F.Pipe2(
 		ctx.State,
@@ -71,9 +70,9 @@ func continueOrReturn(ctx PollContext) IOE.IOEither[error, PollContext] {
 	)
 }
 
-// pollUntilDone is the recursive polling loop.
-// Each iteration: check timeout → fetch condition → resolve state → log → continue or return.
-// All pipe steps are point-free — PollContext threads through without outer closures.
+// pollUntilDone is the recursive polling loop. Each iteration: check timeout →
+// fetch condition → resolve state → log → continue or return. All pipe steps
+// are point-free — PollContext threads through without outer closures.
 func pollUntilDone(ctx PollContext) IOE.IOEither[error, PollContext] {
 	return F.Pipe7(
 		ctx,
