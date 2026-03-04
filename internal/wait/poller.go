@@ -12,15 +12,18 @@ import (
 
 // checkTimeout fails with a timeout error if the deadline has passed.
 // Passes PollContext forward on success so FetchJob can be chained point-free.
-func checkTimeout(ctx PollContext) IOE.IOEither[error, PollContext] {
-	return func() E.Either[error, PollContext] {
-		return E.FromPredicate(
-			func(c PollContext) bool { return time.Now().Before(c.Deadline) },
+func checkTimeout(ctx PollContext) E.Either[error, PollContext] {
+	return F.Pipe1(
+		ctx,
+		E.FromPredicate(
+			func(c PollContext) bool {
+				return time.Now().Before(c.Deadline)
+			},
 			func(c PollContext) error {
 				return fmt.Errorf("timeout waiting for job %s", c.Name)
 			},
-		)(ctx)
-	}
+		),
+	)
 }
 
 // resolveState reads ctx.Condition and either uses it directly (terminal) or
@@ -65,8 +68,12 @@ func continueOrReturn(ctx PollContext) IOE.IOEither[error, PollContext] {
 		ctx.State,
 		O.FromPredicate(isTerminal),
 		O.Fold(
-			func() IOE.IOEither[error, PollContext] { return sleepThenRetry(ctx) },
-			func(_ JobState) IOE.IOEither[error, PollContext] { return IOE.Of[error](ctx) },
+			func() IOE.IOEither[error, PollContext] {
+				return sleepThenRetry(ctx)
+			},
+			func(_ JobState) IOE.IOEither[error, PollContext] {
+				return IOE.Of[error](ctx)
+			},
 		),
 	)
 }
@@ -75,8 +82,10 @@ func continueOrReturn(ctx PollContext) IOE.IOEither[error, PollContext] {
 // Each iteration: check timeout → fetch condition → resolve state → log → continue or return.
 // All pipe steps are point-free — PollContext threads through without outer closures.
 func pollUntilDone(ctx PollContext) IOE.IOEither[error, PollContext] {
-	return F.Pipe5(
-		checkTimeout(ctx),
+	return F.Pipe7(
+		ctx,
+		checkTimeout,
+		IOE.FromEither[error, PollContext],
 		IOE.Chain(FetchJob),
 		IOE.Map[error](ExtractJobCondition),
 		IOE.Chain(resolveState),
