@@ -61,7 +61,7 @@ run-list tag filter="summary=~GoldenBraid":
     EOF
 
 # Look up a GoldenBraid plasmid by exact name in dev cluster
-run-lookup tag name limit="3":
+run-lookup tag name limit="0":
     #!/usr/bin/env bash
     set -euo pipefail
     export KUBECONFIG=$(k3d kubeconfig write k3d-dev-cluster)
@@ -72,7 +72,7 @@ run-lookup tag name limit="3":
       generateName: goldenbraid-lookup-
       namespace: dev
     spec:
-      backoffLimit: 0
+      backoffLimit: {{limit}}
       ttlSecondsAfterFinished: 200
       template:
         spec:
