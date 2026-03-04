@@ -1,0 +1,60 @@
+package wait
+
+import (
+	"context"
+	"fmt"
+
+	fperrors "github.com/IBM/fp-go/v2/errors"
+	F "github.com/IBM/fp-go/v2/function"
+	IOE "github.com/IBM/fp-go/v2/ioeither"
+	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
+)
+
+// FetchJob retrieves the named Job from Kubernetes.
+var FetchJob = func(ctx PollContext) IOE.IOEither[error, *batchv1.Job] {
+	return F.Pipe1(
+		IOE.TryCatchError(func() (*batchv1.Job, error) {
+			return ctx.Client.BatchV1().Jobs(ctx.Namespace).Get(
+				context.Background(), ctx.Name, metav1.GetOptions{},
+			)
+		}),
+		IOE.MapLeft[*batchv1.Job](fperrors.OnError("failed to get job")),
+	)
+}
+
+// FetchPods lists pods belonging to the named Job.
+var FetchPods = func(ctx PollContext) IOE.IOEither[error, *corev1.PodList] {
+	return F.Pipe1(
+		IOE.TryCatchError(func() (*corev1.PodList, error) {
+			return ctx.Client.CoreV1().Pods(ctx.Namespace).List(
+				context.Background(),
+				metav1.ListOptions{
+					LabelSelector: fmt.Sprintf("job-name=%s", ctx.Name),
+				},
+			)
+		}),
+		IOE.MapLeft[*corev1.PodList](fperrors.OnError("failed to list job pods")),
+	)
+}
+
+// CreateK8sClient builds a Kubernetes client from the default kubeconfig rules.
+// Reads KUBECONFIG environment variable (set by callers such as justfile or dagu).
+var CreateK8sClient = func(_ Params) IOE.IOEither[error, kubernetes.Interface] {
+	return F.Pipe1(
+		IOE.TryCatchError(func() (kubernetes.Interface, error) {
+			rules := clientcmd.NewDefaultClientConfigLoadingRules()
+			cfg, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+				rules, &clientcmd.ConfigOverrides{},
+			).ClientConfig()
+			if err != nil {
+				return nil, err
+			}
+			return kubernetes.NewForConfig(cfg)
+		}),
+		IOE.MapLeft[kubernetes.Interface](fperrors.OnError("failed to create k8s client")),
+	)
+}

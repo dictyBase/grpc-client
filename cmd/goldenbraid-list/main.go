@@ -6,10 +6,11 @@ import (
 	"os"
 
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/client"
+	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/wait"
 	"github.com/urfave/cli/v3"
 )
 
-func main() {
+func main() { //nolint:funlen
 	app := &cli.Command{
 		Name:  "goldenbraid-list",
 		Usage: "List GoldenBraid plasmids from stock API",
@@ -80,6 +81,28 @@ func main() {
 					},
 				},
 				Action: client.LookupPlasmidByName,
+			},
+			{
+				Name:  "wait-job",
+				Usage: "Wait for a Kubernetes job to complete, detecting stuck pods early",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "name",
+						Usage:    "Job name to wait for",
+						Required: true,
+					},
+					&cli.StringFlag{
+						Name:  "namespace",
+						Usage: "Kubernetes namespace",
+						Value: "dev",
+					},
+					&cli.StringFlag{
+						Name:  "timeout",
+						Usage: "Maximum wait duration (e.g. 60s, 5m)",
+						Value: "60s",
+					},
+				},
+				Action: wait.JobAction,
 			},
 		},
 	}
