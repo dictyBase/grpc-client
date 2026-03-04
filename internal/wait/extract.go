@@ -89,11 +89,17 @@ func toTerminalState(c batchv1.JobCondition) O.Option[JobState] {
 	)
 }
 
-// ExtractJobCondition returns the first terminal condition (Complete or Failed) from a Job.
-func ExtractJobCondition(job *batchv1.Job) O.Option[JobState] {
-	return F.Pipe2(
-		job.Status.Conditions,
+// ExtractJobCondition reads ctx.Job, extracts the first terminal condition,
+// and stores it in ctx.Condition.
+func ExtractJobCondition(ctx PollContext) PollContext {
+	setCondition := func(cond O.Option[JobState]) PollContext {
+		ctx.Condition = cond
+		return ctx
+	}
+	return F.Pipe3(
+		ctx.Job.Status.Conditions,
 		A.FilterMap(toTerminalState),
 		A.Head,
+		setCondition,
 	)
 }

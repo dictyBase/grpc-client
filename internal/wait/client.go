@@ -15,15 +15,19 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// FetchJob retrieves the named Job from Kubernetes.
-func FetchJob(ctx PollContext) IOE.IOEither[error, *batchv1.Job] {
-	return F.Pipe1(
+// FetchJob retrieves the named Job from Kubernetes and stores it in ctx.Job.
+func FetchJob(ctx PollContext) IOE.IOEither[error, PollContext] {
+	return F.Pipe2(
 		IOE.TryCatchError(func() (*batchv1.Job, error) {
 			return ctx.Client.BatchV1().Jobs(ctx.Namespace).Get(
 				context.Background(), ctx.Name, metav1.GetOptions{},
 			)
 		}),
 		IOE.MapLeft[*batchv1.Job](fperrors.OnError("failed to get job")),
+		IOE.Map[error](func(job *batchv1.Job) PollContext {
+			ctx.Job = job
+			return ctx
+		}),
 	)
 }
 

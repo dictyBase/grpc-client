@@ -7,6 +7,7 @@ import (
 
 	F "github.com/IBM/fp-go/v2/function"
 	O "github.com/IBM/fp-go/v2/option"
+	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -42,8 +43,9 @@ type PollContext struct {
 	WithClient
 	Logger    *slog.Logger
 	Deadline  time.Time
-	State     JobState
+	Job       *batchv1.Job
 	Condition O.Option[JobState]
+	State     JobState
 }
 
 // setClient is a curried setter used with IOE.Bind to inject the K8s client.
