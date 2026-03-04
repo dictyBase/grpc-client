@@ -48,7 +48,7 @@ type PollContext struct {
 	State     JobState
 }
 
-// setClient is a curried setter used with IOE.Bind to inject the K8s client.
+// SetClient is a curried setter used with IOE.Bind to inject the K8s client.
 var SetClient = F.Curry2(func(c kubernetes.Interface, p Params) WithClient {
 	return WithClient{Params: p, Client: c}
 })

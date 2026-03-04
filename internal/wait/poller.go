@@ -30,18 +30,22 @@ func resolveState(ctx PollContext) IOE.IOEither[error, PollContext] {
 		ctx.State = state
 		return ctx
 	}
-	return O.Fold(
-		func() IOE.IOEither[error, PollContext] {
-			return F.Pipe2(
-				FetchPods(ctx),
-				IOE.Map[error](ClassifyPodState),
-				IOE.Map[error](withState),
-			)
-		},
-		func(state JobState) IOE.IOEither[error, PollContext] {
-			return IOE.Of[error](withState(state))
-		},
-	)(ctx.Condition)
+	return F.Pipe1(
+		ctx.Condition,
+		O.Fold(
+			func() IOE.IOEither[error, PollContext] {
+				return F.Pipe3(
+					ctx,
+					FetchPods,
+					IOE.Map[error](ClassifyPodState),
+					IOE.Map[error](withState),
+				)
+			},
+			func(state JobState) IOE.IOEither[error, PollContext] {
+				return IOE.Of[error](withState(state))
+			},
+		),
+	)
 }
 
 // sleepThenRetry sleeps for PollInterval then recurses into pollUntilDone.

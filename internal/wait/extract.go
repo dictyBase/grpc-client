@@ -26,7 +26,9 @@ func isStuckReason(reason string) bool {
 
 // allContainerStatuses concatenates init and regular container statuses for a pod.
 func allContainerStatuses(pod corev1.Pod) []corev1.ContainerStatus {
-	return append(pod.Status.InitContainerStatuses, pod.Status.ContainerStatuses...)
+	return append(
+		pod.Status.InitContainerStatuses,
+		pod.Status.ContainerStatuses...)
 }
 
 // toStuckReason extracts a stuck reason from a ContainerStatus if one exists.
@@ -92,14 +94,13 @@ func toTerminalState(c batchv1.JobCondition) O.Option[JobState] {
 // ExtractJobCondition reads ctx.Job, extracts the first terminal condition,
 // and stores it in ctx.Condition.
 func ExtractJobCondition(ctx PollContext) PollContext {
-	setCondition := func(cond O.Option[JobState]) PollContext {
-		ctx.Condition = cond
-		return ctx
-	}
 	return F.Pipe3(
 		ctx.Job.Status.Conditions,
 		A.FilterMap(toTerminalState),
 		A.Head,
-		setCondition,
+		func(cond O.Option[JobState]) PollContext {
+			ctx.Condition = cond
+			return ctx
+		},
 	)
 }
