@@ -16,7 +16,7 @@ import (
 )
 
 // FetchJob retrieves the named Job from Kubernetes.
-var FetchJob = func(ctx PollContext) IOE.IOEither[error, *batchv1.Job] {
+func FetchJob(ctx PollContext) IOE.IOEither[error, *batchv1.Job] {
 	return F.Pipe1(
 		IOE.TryCatchError(func() (*batchv1.Job, error) {
 			return ctx.Client.BatchV1().Jobs(ctx.Namespace).Get(
@@ -28,7 +28,7 @@ var FetchJob = func(ctx PollContext) IOE.IOEither[error, *batchv1.Job] {
 }
 
 // FetchPods lists pods belonging to the named Job.
-var FetchPods = func(ctx PollContext) IOE.IOEither[error, *corev1.PodList] {
+func FetchPods(ctx PollContext) IOE.IOEither[error, *corev1.PodList] {
 	return F.Pipe1(
 		IOE.TryCatchError(func() (*corev1.PodList, error) {
 			return ctx.Client.CoreV1().Pods(ctx.Namespace).List(

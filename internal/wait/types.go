@@ -48,7 +48,8 @@ var SetClient = F.Curry2(func(c kubernetes.Interface, p Params) WithClient {
 	return WithClient{Params: p, Client: c}
 })
 
-// setPollReady is a curried setter used with IOE.Let to attach the logger and deadline.
+// SetPollReady is a curried setter used with IOE.Let to attach the logger and
+// deadline.
 var SetPollReady = F.Curry2(func(deadline time.Time, c WithClient) PollContext {
 	return PollContext{
 		WithClient: c,
@@ -59,16 +60,16 @@ var SetPollReady = F.Curry2(func(deadline time.Time, c WithClient) PollContext {
 
 // computeDeadline derives the polling deadline from Params.Timeout.
 // Pure function — safe for use with IOE.Let.
-var computeDeadline = func(c WithClient) time.Time {
+func computeDeadline(c WithClient) time.Time {
 	return time.Now().Add(c.Timeout)
 }
 
 // isTerminal returns true for any JobState that ends the polling loop.
-var isTerminal = func(s JobState) bool {
+func isTerminal(s JobState) bool {
 	return s == JobComplete || s == JobFailed || s == JobStuck
 }
 
 // isComplete returns true only for a successfully completed job.
-var isComplete = func(s JobState) bool {
+func isComplete(s JobState) bool {
 	return s == JobComplete
 }
