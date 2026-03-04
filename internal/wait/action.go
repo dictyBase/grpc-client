@@ -12,6 +12,8 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
+const defaultTimeout = 60 * time.Second
+
 // validateTerminalState succeeds for Complete; fails with an error for any other state.
 var validateTerminalState = E.FromPredicate(
 	isComplete,
@@ -20,16 +22,13 @@ var validateTerminalState = E.FromPredicate(
 	},
 )
 
-const defaultTimeout = 60 * time.Second
-
 // parseDuration converts a CLI timeout string to time.Duration.
 // Falls back to defaultTimeout (60s) on parse failure.
-var parseDuration = func(s string) time.Duration {
-	d, err := time.ParseDuration(s)
-	if err != nil {
-		return defaultTimeout
-	}
-	return d
+func parseDuration(s string) time.Duration {
+	return F.Pipe1(
+		E.TryCatchError(time.ParseDuration(s)),
+		E.GetOrElse(func(_ error) time.Duration { return defaultTimeout }),
+	)
 }
 
 // JobAction is the urfave/cli v3 action for the wait-job subcommand.
