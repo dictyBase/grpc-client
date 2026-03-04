@@ -1,17 +1,17 @@
 name: goldenbraid-k8s-lookup
 type: graph
 description: "Orchestrates a plasmid lookup job in the dev cluster."
-env:
-  - TAG=latest
-  - NAME=pDGB3alpha1
-  - LIMIT=3
+params:
+  - TAG: latest
+  - NAME: pDGB3alpha1
+  - LIMIT: 3
 
 steps:
   - name: submit
     description: "Launch the Kubernetes job"
     command: |
       set -euo pipefail
-      JOB_OUTPUT=$(just run-lookup $TAG $NAME $LIMIT)
+      JOB_OUTPUT=$(just run-lookup ${TAG} ${NAME} ${LIMIT})
       echo "$JOB_OUTPUT" | grep -o 'goldenbraid-lookup-[a-z0-9]*' | head -n 1
     output: JOB_NAME
 
