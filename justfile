@@ -88,20 +88,57 @@ run-lookup tag name limit="3":
                 - "{{limit}}"
     EOF
 
-# Wait for a job to complete or fail
+# Wait for a job to complete or fail, detecting stuck pods early
 wait-job name namespace="dev" timeout="60s":
     #!/usr/bin/env bash
     set -euo pipefail
     export KUBECONFIG=$(k3d kubeconfig write k3d-dev-cluster)
     echo "Waiting for job {{name}}..."
-    if kubectl wait --for=condition=complete --timeout={{timeout}} job/{{name}} -n {{namespace}} 2>/dev/null; then
-        echo "Job {{name}} completed successfully"
-        exit 0
-    fi
-    if kubectl wait --for=condition=failed --timeout=5s job/{{name}} -n {{namespace}} 2>/dev/null; then
-        echo "Job {{name}} failed" >&2
-        exit 1
-    fi
+    TIMEOUT_STR="{{timeout}}"
+    case "$TIMEOUT_STR" in
+        *m) TIMEOUT_SECS=$(( ${TIMEOUT_STR%m} * 60 )) ;;
+        *s) TIMEOUT_SECS="${TIMEOUT_STR%s}" ;;
+        *)  TIMEOUT_SECS="$TIMEOUT_STR" ;;
+    esac
+    ELAPSED=0
+    POLL=5
+
+    while [ "$ELAPSED" -lt "$TIMEOUT_SECS" ]; do
+        # Check job-level terminal conditions
+        JOB_STATUS=$(kubectl get job {{name}} -n {{namespace}} \
+            -o jsonpath='{range .status.conditions[*]}{.type}={.status}{"\n"}{end}' \
+            2>/dev/null || true)
+
+        if echo "$JOB_STATUS" | grep -q "Complete=True"; then
+            echo "Job {{name}} completed successfully"
+            exit 0
+        fi
+
+        if echo "$JOB_STATUS" | grep -q "Failed=True"; then
+            echo "Job {{name}} failed" >&2
+            exit 1
+        fi
+
+        # Check pod-level stuck states (image pull, crash loop)
+        POD_REASON=$(kubectl get pods -l job-name={{name}} -n {{namespace}} \
+            -o jsonpath='{range .items[0].status.initContainerStatuses[*]}{.state.waiting.reason}{"\n"}{end}{range .items[0].status.containerStatuses[*]}{.state.waiting.reason}{"\n"}{end}' \
+            2>/dev/null | grep -v '^$' | head -1 || true)
+
+        case "$POD_REASON" in
+            ImagePullBackOff|ErrImagePull|InvalidImageName)
+                echo "Pod image pull failed (${POD_REASON}) for job {{name}}" >&2
+                exit 1
+                ;;
+            CrashLoopBackOff|CreateContainerConfigError|CreateContainerError|ContainerCannotRun)
+                echo "Pod stuck in ${POD_REASON} for job {{name}}" >&2
+                exit 1
+                ;;
+        esac
+
+        sleep "$POLL"
+        ELAPSED=$((ELAPSED + POLL))
+    done
+
     echo "Job {{name}} timed out after {{timeout}}" >&2
     exit 1
 
