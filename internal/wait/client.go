@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -44,16 +45,17 @@ var FetchPods = func(ctx PollContext) IOE.IOEither[error, *corev1.PodList] {
 // CreateK8sClient builds a Kubernetes client from the default kubeconfig rules.
 // Reads KUBECONFIG environment variable (set by callers such as justfile or dagu).
 var CreateK8sClient = func(_ Params) IOE.IOEither[error, kubernetes.Interface] {
-	return F.Pipe1(
-		IOE.TryCatchError(func() (kubernetes.Interface, error) {
-			rules := clientcmd.NewDefaultClientConfigLoadingRules()
-			cfg, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-				rules, &clientcmd.ConfigOverrides{},
+	return F.Pipe2(
+		IOE.TryCatchError(func() (*rest.Config, error) {
+			return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+				clientcmd.NewDefaultClientConfigLoadingRules(),
+				&clientcmd.ConfigOverrides{},
 			).ClientConfig()
-			if err != nil {
-				return nil, err
-			}
-			return kubernetes.NewForConfig(cfg)
+		}),
+		IOE.Chain(func(cfg *rest.Config) IOE.IOEither[error, kubernetes.Interface] {
+			return IOE.TryCatchError(func() (kubernetes.Interface, error) {
+				return kubernetes.NewForConfig(cfg)
+			})
 		}),
 		IOE.MapLeft[kubernetes.Interface](fperrors.OnError("failed to create k8s client")),
 	)
