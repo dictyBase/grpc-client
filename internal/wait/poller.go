@@ -51,12 +51,6 @@ func resolveState(ctx PollContext) IOE.IOEither[error, PollContext] {
 	)
 }
 
-// sleepThenRetry sleeps for PollInterval then recurses into pollUntilDone.
-func sleepThenRetry(ctx PollContext) IOE.IOEither[error, PollContext] {
-	time.Sleep(PollInterval)
-	return pollUntilDone(ctx)
-}
-
 // continueOrReturn decides whether to stop or keep polling based on ctx.State.
 //
 //	terminal state (Complete/Failed/Stuck) → return ctx as-is.
@@ -67,7 +61,8 @@ func continueOrReturn(ctx PollContext) IOE.IOEither[error, PollContext] {
 		O.FromPredicate(isTerminal),
 		O.Fold(
 			func() IOE.IOEither[error, PollContext] {
-				return sleepThenRetry(ctx)
+				time.Sleep(PollInterval)
+				return pollUntilDone(ctx)
 			},
 			func(_ JobState) IOE.IOEither[error, PollContext] {
 				return IOE.Of[error](ctx)
