@@ -44,9 +44,10 @@ func parseDuration(s string) time.Duration {
 func JobAction(_ context.Context, cmd *cli.Command) error {
 	return F.Pipe6(
 		IOE.Of[error](Params{
-			Name:      cmd.String("name"),
-			Namespace: cmd.String("namespace"),
-			Timeout:   parseDuration(cmd.String("timeout")),
+			Name:       cmd.String("name"),
+			Namespace:  cmd.String("namespace"),
+			Timeout:    parseDuration(cmd.String("timeout")),
+			Kubeconfig: cmd.String("kubeconfig"),
 		}),
 		IOE.Bind(SetClient, CreateK8sClient),
 		IOE.Let[error](SetPollReady, computeDeadline),

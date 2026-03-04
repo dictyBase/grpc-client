@@ -93,8 +93,8 @@ run-lookup tag name limit="3":
 wait-job name namespace="dev" timeout="60s":
     #!/usr/bin/env bash
     set -euo pipefail
-    export KUBECONFIG=$(k3d kubeconfig write k3d-dev-cluster)
-    go run ./cmd/goldenbraid-list/ wait-job --name {{name}} --namespace {{namespace}} --timeout {{timeout}}
+    kubeconfig=$(k3d kubeconfig write k3d-dev-cluster)
+    go run ./cmd/goldenbraid-list/ wait-job --name {{name}} --namespace {{namespace}} --timeout {{timeout}} --kubeconfig "$kubeconfig"
 
 # Get the logs for a specific job
 job-logs name namespace="dev":

@@ -101,6 +101,11 @@ func main() { //nolint:funlen
 						Usage: "Maximum wait duration (e.g. 60s, 5m)",
 						Value: "60s",
 					},
+					&cli.StringFlag{
+						Name:    "kubeconfig",
+						Usage:   "Path to kubeconfig file",
+						Sources: cli.EnvVars("KUBECONFIG"),
+					},
 				},
 				Action: wait.JobAction,
 			},

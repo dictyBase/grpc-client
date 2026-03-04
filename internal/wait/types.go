@@ -24,9 +24,10 @@ const PollInterval = 5 * time.Second
 
 // Params holds CLI-supplied parameters for the wait-job command.
 type Params struct {
-	Name      string
-	Namespace string
-	Timeout   time.Duration
+	Name       string
+	Namespace  string
+	Timeout    time.Duration
+	Kubeconfig string
 }
 
 // WithClient enriches Params with an injected Kubernetes client.
