@@ -31,18 +31,22 @@ func parseDuration(s string) time.Duration {
 	)
 }
 
+// extractState pulls the final JobState out of a completed PollContext.
+func extractState(ctx PollContext) JobState { return ctx.State }
+
 // JobAction is the urfave/cli v3 action for the wait-job subcommand.
 //
-// Pipeline (7 steps):
+// Pipeline (8 steps):
 //  1. Build Params from CLI flags
 //  2. Inject Kubernetes client (Bind)
 //  3. Compute deadline and attach logger (Let)
-//  4. Run polling loop
-//  5. Execute IOEither effect → Either
-//  6. Validate terminal state (Complete → ok, else → error)
-//  7. Fold Either → error
+//  4. Run polling loop (returns PollContext with final State)
+//  5. Extract JobState from PollContext
+//  6. Execute IOEither effect → Either
+//  7. Validate terminal state (Complete → ok, else → error)
+//  8. Fold Either → error
 func JobAction(_ context.Context, cmd *cli.Command) error {
-	return F.Pipe6(
+	return F.Pipe7(
 		IOE.Of[error](Params{
 			Name:       cmd.String("name"),
 			Namespace:  cmd.String("namespace"),
@@ -52,6 +56,7 @@ func JobAction(_ context.Context, cmd *cli.Command) error {
 		IOE.Bind(SetClient, CreateK8sClient),
 		IOE.Let[error](SetPollReady, computeDeadline),
 		IOE.Chain(pollUntilDone),
+		IOE.Map[error](extractState),
 		fputil.ToEither[error, JobState],
 		E.Chain(validateTerminalState),
 		E.Fold(

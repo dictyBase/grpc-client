@@ -41,6 +41,7 @@ type PollContext struct {
 	WithClient
 	Logger   *slog.Logger
 	Deadline time.Time
+	State    JobState
 }
 
 // setClient is a curried setter used with IOE.Bind to inject the K8s client.
@@ -55,6 +56,7 @@ var SetPollReady = F.Curry2(func(deadline time.Time, c WithClient) PollContext {
 		WithClient: c,
 		Logger:     slog.New(slog.NewJSONHandler(os.Stdout, nil)),
 		Deadline:   deadline,
+		State:      JobPending,
 	}
 })
 
