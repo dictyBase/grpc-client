@@ -6,6 +6,7 @@ import (
 	"time"
 
 	F "github.com/IBM/fp-go/v2/function"
+	O "github.com/IBM/fp-go/v2/option"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -39,9 +40,10 @@ type WithClient struct {
 // PollContext is the fully-enriched context used throughout the polling loop.
 type PollContext struct {
 	WithClient
-	Logger   *slog.Logger
-	Deadline time.Time
-	State    JobState
+	Logger    *slog.Logger
+	Deadline  time.Time
+	State     JobState
+	Condition O.Option[JobState]
 }
 
 // setClient is a curried setter used with IOE.Bind to inject the K8s client.
@@ -57,6 +59,7 @@ var SetPollReady = F.Curry2(func(deadline time.Time, c WithClient) PollContext {
 		Logger:     slog.New(slog.NewJSONHandler(os.Stdout, nil)),
 		Deadline:   deadline,
 		State:      JobPending,
+		Condition:  O.None[JobState](),
 	}
 })
 

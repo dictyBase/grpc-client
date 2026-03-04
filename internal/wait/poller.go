@@ -11,7 +11,7 @@ import (
 )
 
 // checkTimeout fails with a timeout error if the deadline has passed.
-// Passes PollContext forward on success so evaluate can be chained point-free.
+// Passes PollContext forward on success so fetchCondition can be chained point-free.
 func checkTimeout(ctx PollContext) IOE.IOEither[error, PollContext] {
 	return func() E.Either[error, PollContext] {
 		return E.FromPredicate(
@@ -23,11 +23,23 @@ func checkTimeout(ctx PollContext) IOE.IOEither[error, PollContext] {
 	}
 }
 
-// resolveState maps an Option[JobState] to an IOEither[error, PollContext]:
-//
-//	Some(state) → embed state in ctx and return directly.
-//	None        → fetch pods, classify, embed result in ctx.
-func resolveState(ctx PollContext) func(O.Option[JobState]) IOE.IOEither[error, PollContext] {
+// fetchCondition fetches the Job, extracts the terminal condition, and stores
+// it in ctx.Condition so resolveState can read it point-free.
+func fetchCondition(ctx PollContext) IOE.IOEither[error, PollContext] {
+	setCondition := func(cond O.Option[JobState]) PollContext {
+		ctx.Condition = cond
+		return ctx
+	}
+	return F.Pipe2(
+		FetchJob(ctx),
+		IOE.Map[error](ExtractJobCondition),
+		IOE.Map[error](setCondition),
+	)
+}
+
+// resolveState reads ctx.Condition and either uses it directly (terminal) or
+// fetches pods to classify (Pending vs Stuck), updating ctx.State.
+func resolveState(ctx PollContext) IOE.IOEither[error, PollContext] {
 	withState := func(state JobState) PollContext {
 		ctx.State = state
 		return ctx
@@ -43,16 +55,7 @@ func resolveState(ctx PollContext) func(O.Option[JobState]) IOE.IOEither[error, 
 		func(state JobState) IOE.IOEither[error, PollContext] {
 			return IOE.Of[error](withState(state))
 		},
-	)
-}
-
-// evaluate fetches the Job, classifies its state, and embeds the result in PollContext.
-func evaluate(ctx PollContext) IOE.IOEither[error, PollContext] {
-	return F.Pipe2(
-		FetchJob(ctx),
-		IOE.Map[error](ExtractJobCondition),
-		IOE.Chain(resolveState(ctx)),
-	)
+	)(ctx.Condition)
 }
 
 // sleepThenRetry sleeps for PollInterval then recurses into pollUntilDone.
@@ -79,12 +82,13 @@ func continueOrReturn(ctx PollContext) IOE.IOEither[error, PollContext] {
 }
 
 // pollUntilDone is the recursive polling loop.
-// Each iteration: check timeout → evaluate → log state → continue or return.
-// All pipe steps are point-free — no closure over ctx inside the pipe body.
+// Each iteration: check timeout → fetch condition → resolve state → log → continue or return.
+// All pipe steps are point-free — PollContext threads through without outer closures.
 func pollUntilDone(ctx PollContext) IOE.IOEither[error, PollContext] {
-	return F.Pipe3(
+	return F.Pipe4(
 		checkTimeout(ctx),
-		IOE.Chain(evaluate),
+		IOE.Chain(fetchCondition),
+		IOE.Chain(resolveState),
 		IOE.ChainFirstIOK[error](logState),
 		IOE.Chain(continueOrReturn),
 	)
