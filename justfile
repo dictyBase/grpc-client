@@ -72,6 +72,7 @@ run-lookup tag name limit="3":
       generateName: goldenbraid-lookup-
       namespace: dev
     spec:
+      backoffLimit: 0
       ttlSecondsAfterFinished: 200
       template:
         spec:
