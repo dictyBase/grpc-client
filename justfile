@@ -9,6 +9,21 @@ platform_multi := "linux/amd64,linux/arm64"
 image := namespace + "/" + name
 ghcr_image := "ghcr.io/" + image
 
+[private]
+resolve-kubeconfig env="dev" k8s_config="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -n "{{k8s_config}}" ]; then
+        printf '%s\n' "{{k8s_config}}"
+    elif [ "{{env}}" = "dev" ]; then
+        kubeconfig=$(mktemp)
+        k3d kubeconfig get k3d-dev-cluster > "$kubeconfig"
+        printf '%s\n' "$kubeconfig"
+    else
+        echo "ERROR: k8s_config must be provided for {{env}} environment" >&2
+        exit 1
+    fi
+
 # Build the docker image for the target platform
 build tag="latest":
     docker buildx build --platform {{platform}} -t {{image}}:{{tag}} .
@@ -35,17 +50,17 @@ push-ghcr-multi tag="latest":
 list:
     docker images | grep {{image}}
 
-# List GoldenBraid plasmids in dev cluster
-run-list tag filter="summary=~GoldenBraid":
+# List GoldenBraid plasmids in Kubernetes
+run-list tag filter="summary=~GoldenBraid" k8s_config="" k8s_namespace="dev" env="dev":
     #!/usr/bin/env bash
     set -euo pipefail
-    export KUBECONFIG=$(k3d kubeconfig write k3d-dev-cluster)
-    kubectl create -f - <<EOF
+    kubeconfig=$(just resolve-kubeconfig "{{env}}" "{{k8s_config}}")
+    kubectl create -f - --kubeconfig "$kubeconfig" -o jsonpath='{.metadata.name}' <<EOF
     apiVersion: batch/v1
     kind: Job
     metadata:
       generateName: goldenbraid-list-
-      namespace: dev
+      namespace: {{k8s_namespace}}
     spec:
       ttlSecondsAfterFinished: 200
       template:
@@ -90,23 +105,25 @@ run-lookup tag name limit="3":
 
 # Wait for a Kubernetes job to complete, fail, or detect stuck pods.
 # Delegates to the goldenbraid-list wait-job subcommand (fp-go implementation).
-wait-job name namespace="dev" timeout="60s":
+wait-job name k8s_config="" k8s_namespace="dev" env="dev" timeout="60s":
     #!/usr/bin/env bash
     set -euo pipefail
-    kubeconfig=$(k3d kubeconfig write k3d-dev-cluster)
-    go run ./cmd/goldenbraid-list/ wait-job --name {{name}} --namespace {{namespace}} --timeout {{timeout}} --kubeconfig "$kubeconfig"
+    kubeconfig=$(just resolve-kubeconfig "{{env}}" "{{k8s_config}}")
+    go run ./cmd/goldenbraid-list/ wait-job --name {{name}} --namespace {{k8s_namespace}} --timeout {{timeout}} --kubeconfig "$kubeconfig"
 
 # Get the logs for a specific job
-job-logs name namespace="dev":
+job-logs name k8s_config="" k8s_namespace="dev" env="dev":
     #!/usr/bin/env bash
-    export KUBECONFIG=$(k3d kubeconfig write k3d-dev-cluster)
-    kubectl logs job/{{name}} -n {{namespace}}
+    set -euo pipefail
+    kubeconfig=$(just resolve-kubeconfig "{{env}}" "{{k8s_config}}")
+    kubectl logs job/{{name}} --kubeconfig "$kubeconfig" -n {{k8s_namespace}}
 
 # Get failure details for a job
-job-debug name namespace="dev":
+job-debug name k8s_config="" k8s_namespace="dev" env="dev":
     #!/usr/bin/env bash
-    export KUBECONFIG=$(k3d kubeconfig write k3d-dev-cluster)
+    set -euo pipefail
+    kubeconfig=$(just resolve-kubeconfig "{{env}}" "{{k8s_config}}")
     echo "--- Pod Logs ---"
-    kubectl logs job/{{name}} -n {{namespace}} || true
+    kubectl logs job/{{name}} --kubeconfig "$kubeconfig" -n {{k8s_namespace}} || true
     echo "--- Job Description ---"
-    kubectl describe job/{{name}} -n {{namespace}}
+    kubectl describe job/{{name}} --kubeconfig "$kubeconfig" -n {{k8s_namespace}}
