@@ -12,7 +12,7 @@ import (
 
 func main() { //nolint:funlen
 	app := &cli.Command{
-		Name:  "goldenbraid-list",
+		Name:  "grpc-client",
 		Usage: "CLI for gRPC stock service operations",
 		Commands: []*cli.Command{
 			{

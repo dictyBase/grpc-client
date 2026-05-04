@@ -14,7 +14,7 @@ func TestLookupSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 
 	var gotHost, gotPort string
 	app := &cli.Command{
-		Name: "goldenbraid-list",
+		Name: "plasmid",
 		Commands: []*cli.Command{
 			{
 				Name: "plasmid",
@@ -58,7 +58,7 @@ func TestListSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 
 	var gotHost, gotPort string
 	app := &cli.Command{
-		Name: "goldenbraid-list",
+		Name: "plasmid",
 		Commands: []*cli.Command{
 			{
 				Name: "plasmid",
