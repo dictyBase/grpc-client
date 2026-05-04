@@ -20,6 +20,7 @@ type ListPlasmidsConfig struct {
 	Limit      int64
 	Cursor     int64
 	PlasmidID  string
+	StrainID   string
 }
 
 // WithConnection enriches ListPlasmidsConfig with gRPC connection

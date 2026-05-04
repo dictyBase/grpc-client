@@ -10,139 +10,203 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-func main() { //nolint:funlen
-	app := &cli.Command{
-		Name:  "grpc-client",
-		Usage: "CLI for gRPC stock service operations",
-		Commands: []*cli.Command{
-			{
-				Name:  "search",
-				Usage: "Search for GoldenBraid plasmids in the stock API",
-				Commands: []*cli.Command{
-					{
-						Name:  "list-all",
-						Usage: "List all plasmids without filter, fetched 30 at a time",
-						Flags: []cli.Flag{
-							&cli.StringFlag{
-								Name:    "host",
-								Usage:   "gRPC server host address",
-								Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
-							},
-							&cli.StringFlag{
-								Name:    "port",
-								Usage:   "gRPC server port",
-								Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
-							},
-						},
-						Action: client.ListAllPlasmids,
-					},
-					{
-						Name:  "list",
-						Usage: "List GoldenBraid plasmids matching a filter",
-						Flags: []cli.Flag{
-							&cli.StringFlag{
-								Name:    "host",
-								Usage:   "gRPC server host address",
-								Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
-							},
-							&cli.StringFlag{
-								Name:    "port",
-								Usage:   "gRPC server port",
-								Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
-							},
-							&cli.StringFlag{
-								Name:    "filter",
-								Usage:   "Filter string for the stock API",
-								Value:   "summary=~GoldenBraid",
-								Sources: cli.EnvVars("STOCK_API_FILTER"),
-							},
-						},
-						Action: client.ListPlasmids,
-					},
-					{
-						Name:  "lookup",
-						Usage: "Look up a GoldenBraid plasmid by exact name",
-						Flags: []cli.Flag{
-							&cli.StringFlag{
-								Name:    "host",
-								Usage:   "gRPC server host address",
-								Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
-							},
-							&cli.StringFlag{
-								Name:    "port",
-								Usage:   "gRPC server port",
-								Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
-							},
-							&cli.StringFlag{
-								Name:     "name",
-								Usage:    "Exact plasmid name to look up (e.g. pDGB3alpha1)",
-								Required: true,
-							},
-							&cli.IntFlag{
-								Name:  "limit",
-								Usage: "Limit for the number of results",
-								Value: client.DefaultLookupLimit,
-							},
-						},
-						Action: client.LookupPlasmidByName,
-					},
-					{
-						Name:  "fetch",
-						Usage: "Fetch a single plasmid by its identifier",
-						Flags: []cli.Flag{
-							&cli.StringFlag{
-								Name:    "host",
-								Usage:   "gRPC server host address",
-								Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
-							},
-							&cli.StringFlag{
-								Name:    "port",
-								Usage:   "gRPC server port",
-								Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
-							},
-							&cli.StringFlag{
-								Name:     "identifier",
-								Aliases:  []string{"i"},
-								Usage:    "Identifier of the plasmid to fetch",
-								Required: true,
-							},
-						},
-						Action: client.FetchPlasmid,
-					},
-				},
-			},
-			{
-				Name:  "wait-job",
-				Usage: "Wait for a Kubernetes job to complete, detecting stuck pods early",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:     "name",
-						Usage:    "Job name to wait for",
-						Required: true,
-					},
-					&cli.StringFlag{
-						Name:  "namespace",
-						Usage: "Kubernetes namespace",
-						Value: "dev",
-					},
-					&cli.StringFlag{
-						Name:  "timeout",
-						Usage: "Maximum wait duration (e.g. 60s, 5m)",
-						Value: "60s",
-					},
-					&cli.StringFlag{
-						Name:    "kubeconfig",
-						Usage:   "Path to kubeconfig file",
-						Sources: cli.EnvVars("KUBECONFIG"),
-					},
-				},
-				Action: wait.JobAction,
-			},
-		},
-	}
-
+func main() {
+	app := buildCommandTree()
 	if err := app.Run(context.Background(), os.Args); err != nil {
 		fmt.Fprint(os.Stderr, err)
 		os.Exit(1)
+	}
+}
+
+func buildCommandTree() *cli.Command {
+	return &cli.Command{
+		Name:  "grpc-client",
+		Usage: "CLI for gRPC stock service operations",
+		Commands: []*cli.Command{
+			buildSearchCommands(),
+			buildStrainCommands(),
+			buildWaitJobCommand(),
+		},
+	}
+}
+
+func buildSearchCommands() *cli.Command {
+	return &cli.Command{
+		Name:  "search",
+		Usage: "Search for GoldenBraid plasmids in the stock API",
+		Commands: []*cli.Command{
+			buildListAllCommand(),
+			buildListCommand(),
+			buildLookupCommand(),
+			buildPlasmidFetchCommand(),
+		},
+	}
+}
+
+func buildListAllCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "list-all",
+		Usage: "List all plasmids without filter, fetched 30 at a time",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "host",
+				Usage:   "gRPC server host address",
+				Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
+			},
+			&cli.StringFlag{
+				Name:    "port",
+				Usage:   "gRPC server port",
+				Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
+			},
+		},
+		Action: client.ListAllPlasmids,
+	}
+}
+
+func buildListCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "list",
+		Usage: "List GoldenBraid plasmids matching a filter",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "host",
+				Usage:   "gRPC server host address",
+				Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
+			},
+			&cli.StringFlag{
+				Name:    "port",
+				Usage:   "gRPC server port",
+				Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
+			},
+			&cli.StringFlag{
+				Name:    "filter",
+				Usage:   "Filter string for the stock API",
+				Value:   "summary=~GoldenBraid",
+				Sources: cli.EnvVars("STOCK_API_FILTER"),
+			},
+		},
+		Action: client.ListPlasmids,
+	}
+}
+
+func buildLookupCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "lookup",
+		Usage: "Look up a GoldenBraid plasmid by exact name",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "host",
+				Usage:   "gRPC server host address",
+				Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
+			},
+			&cli.StringFlag{
+				Name:    "port",
+				Usage:   "gRPC server port",
+				Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
+			},
+			&cli.StringFlag{
+				Name:     "name",
+				Usage:    "Exact plasmid name to look up (e.g. pDGB3alpha1)",
+				Required: true,
+			},
+			&cli.IntFlag{
+				Name:  "limit",
+				Usage: "Limit for the number of results",
+				Value: client.DefaultLookupLimit,
+			},
+		},
+		Action: client.LookupPlasmidByName,
+	}
+}
+
+func buildPlasmidFetchCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "fetch",
+		Usage: "Fetch a single plasmid by its identifier",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "host",
+				Usage:   "gRPC server host address",
+				Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
+			},
+			&cli.StringFlag{
+				Name:    "port",
+				Usage:   "gRPC server port",
+				Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
+			},
+			&cli.StringFlag{
+				Name:     "identifier",
+				Aliases:  []string{"i"},
+				Usage:    "Identifier of the plasmid to fetch",
+				Required: true,
+			},
+		},
+		Action: client.FetchPlasmid,
+	}
+}
+
+func buildStrainCommands() *cli.Command {
+	return &cli.Command{
+		Name:  "strain",
+		Usage: "Strain-related operations on the stock API",
+		Commands: []*cli.Command{
+			buildStrainFetchCommand(),
+		},
+	}
+}
+
+func buildStrainFetchCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "fetch",
+		Usage: "Fetch a single strain by its identifier",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "host",
+				Usage:   "gRPC server host address",
+				Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
+			},
+			&cli.StringFlag{
+				Name:    "port",
+				Usage:   "gRPC server port",
+				Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
+			},
+			&cli.StringFlag{
+				Name:     "identifier",
+				Aliases:  []string{"i"},
+				Usage:    "Identifier of the strain to fetch",
+				Required: true,
+			},
+		},
+		Action: client.FetchStrain,
+	}
+}
+
+func buildWaitJobCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "wait-job",
+		Usage: "Wait for a Kubernetes job to complete, detecting stuck pods early",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:     "name",
+				Usage:    "Job name to wait for",
+				Required: true,
+			},
+			&cli.StringFlag{
+				Name:  "namespace",
+				Usage: "Kubernetes namespace",
+				Value: "dev",
+			},
+			&cli.StringFlag{
+				Name:  "timeout",
+				Usage: "Maximum wait duration (e.g. 60s, 5m)",
+				Value: "60s",
+			},
+			&cli.StringFlag{
+				Name:    "kubeconfig",
+				Usage:   "Path to kubeconfig file",
+				Sources: cli.EnvVars("KUBECONFIG"),
+			},
+		},
+		Action: wait.JobAction,
 	}
 }

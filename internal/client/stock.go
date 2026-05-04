@@ -342,6 +342,102 @@ func FetchPlasmid(_ context.Context, cmd *cli.Command) error {
 	})
 }
 
+// wrapFetchStrainError returns an error mapping function that
+// produces a user-friendly message for NotFound errors and wraps others.
+func wrapFetchStrainError(strainID string) func(error) error {
+	return func(err error) error {
+		return F.Pipe2(
+			err,
+			O.FromPredicate(isNotFoundError),
+			O.Fold(
+				F.Constant(
+					F.Pipe1(
+						err,
+						fperrors.OnError("error fetching strain"),
+					),
+				),
+				F.Constant1[error](
+					fmt.Errorf(
+						"strain with identifier %s not found",
+						strainID,
+					),
+				),
+			),
+		)
+	}
+}
+
+// callGetStrain executes gRPC GetStrain call using enriched context
+func callGetStrain(
+	ctx domain.WithConnection,
+) IOE.IOEither[error, *stockpb.Strain] {
+	return F.Pipe1(
+		IOE.TryCatchError(func() (*stockpb.Strain, error) {
+			defer ctx.Connection.Close()
+			return stockpb.NewStockServiceClient(ctx.Connection).
+				GetStrain(context.Background(),
+					&stockpb.StockId{Id: ctx.StrainID})
+		}),
+		IOE.MapLeft[*stockpb.Strain](
+			wrapFetchStrainError(ctx.StrainID),
+		),
+	)
+}
+
+// runFetchStrain executes the full pipeline for fetching a single strain by ID.
+func runFetchStrain(cfg domain.ListPlasmidsConfig) error {
+	result := F.Pipe7(
+		IOE.Of[error](cfg),
+		IOE.ChainFirstIOK[error](
+			IO.Logf[domain.ListPlasmidsConfig](
+				"Fetching strain by ID: %+v",
+			),
+		),
+		IOE.Chain(createWithConnection),
+		IOE.MapLeft[domain.WithConnection](
+			fperrors.OnError("failed to create connection"),
+		),
+		IOE.Chain(callGetStrain),
+		IOE.Map[error](func(s *stockpb.Strain) string {
+			return fmt.Sprintf(
+				"%s %s %s %s %s %s",
+				s.Data.Id,
+				s.Data.Attributes.Label,
+				s.Data.Attributes.CreatedBy,
+				s.Data.Attributes.Publications,
+				s.Data.Attributes.Species,
+				s.Data.Attributes.Genes,
+			)
+		}),
+		fputil.ToEither[error, string],
+		E.Fold(
+			func(err error) T.Tuple2[error, string] {
+				return T.MakeTuple2(err, "")
+			},
+			func(data string) T.Tuple2[error, string] {
+				return T.MakeTuple2[error](nil, data)
+			},
+		),
+	)
+
+	if result.F1 != nil {
+		return result.F1
+	}
+
+	fmt.Println(result.F2)
+
+	return nil
+}
+
+// FetchStrain connects to the gRPC stock service and fetches a single strain by ID.
+func FetchStrain(_ context.Context, cmd *cli.Command) error {
+	return runFetchStrain(domain.ListPlasmidsConfig{
+		ServerAddr: cmd.String("host"),
+		Port:       cmd.String("port"),
+		StrainID:   cmd.String("identifier"),
+	})
+}
+
 // ListAllPlasmids implements the main pipeline for listing all plasmids paginated
 // It serves as the CLI Action runner
 func ListAllPlasmids(_ context.Context, cmd *cli.Command) error {
