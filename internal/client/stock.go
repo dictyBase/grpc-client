@@ -1,3 +1,5 @@
+// Package client implements the gRPC client logic for interacting with the
+// stock service.
 package client
 
 import (
@@ -10,6 +12,7 @@ import (
 	F "github.com/IBM/fp-go/v2/function"
 	IO "github.com/IBM/fp-go/v2/io"
 	IOE "github.com/IBM/fp-go/v2/ioeither"
+	O "github.com/IBM/fp-go/v2/option"
 	T "github.com/IBM/fp-go/v2/tuple"
 	stockpb "github.com/dictyBase/go-genproto/dictybaseapis/stock"
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/aggregation"
@@ -67,6 +70,53 @@ func callListPlasmids(
 		}),
 		IOE.MapLeft[*stockpb.PlasmidCollection](
 			fperrors.OnError("failed to list plasmids"),
+		),
+	)
+}
+
+// isNotFoundError checks if the given error is a gRPC NotFound error.
+func isNotFoundError(err error) bool {
+	return status.Code(err) == codes.NotFound
+}
+
+// wrapFetchPlasmidError returns an error mapping function that
+// produces a user-friendly message for NotFound errors and wraps others.
+func wrapFetchPlasmidError(plasmidID string) func(error) error {
+	return func(err error) error {
+		return F.Pipe2(
+			err,
+			O.FromPredicate(isNotFoundError),
+			O.Fold(
+				F.Constant(
+					F.Pipe1(
+						err,
+						fperrors.OnError("error fetching plasmid"),
+					),
+				),
+				F.Constant1[error](
+					fmt.Errorf(
+						"plasmid with identifier %s not found",
+						plasmidID,
+					),
+				),
+			),
+		)
+	}
+}
+
+// callGetPlasmid executes gRPC GetPlasmid call using enriched context
+func callGetPlasmid(
+	ctx domain.WithConnection,
+) IOE.IOEither[error, *stockpb.Plasmid] {
+	return F.Pipe1(
+		IOE.TryCatchError(func() (*stockpb.Plasmid, error) {
+			defer ctx.Connection.Close()
+			return stockpb.NewStockServiceClient(ctx.Connection).
+				GetPlasmid(context.Background(),
+					&stockpb.StockId{Id: ctx.PlasmidID})
+		}),
+		IOE.MapLeft[*stockpb.Plasmid](
+			wrapFetchPlasmidError(ctx.PlasmidID),
 		),
 	)
 }
@@ -240,35 +290,56 @@ func runAllPlasmidList(cfg domain.ListPlasmidsConfig) error {
 	return nil
 }
 
+// runFetchPlasmid executes the full pipeline for fetching a single plasmid by ID.
+func runFetchPlasmid(cfg domain.ListPlasmidsConfig) error {
+	result := F.Pipe7(
+		IOE.Of[error](cfg),
+		IOE.ChainFirstIOK[error](
+			IO.Logf[domain.ListPlasmidsConfig](
+				"Fetching plasmid by ID: %+v",
+			),
+		),
+		IOE.Chain(createWithConnection),
+		IOE.MapLeft[domain.WithConnection](
+			fperrors.OnError("failed to create connection"),
+		),
+		IOE.Chain(callGetPlasmid),
+		IOE.Map[error](func(p *stockpb.Plasmid) string {
+			return fmt.Sprintf(
+				"%s %s %s %s",
+				p.Data.Id,
+				p.Data.Attributes.Name,
+				p.Data.Attributes.CreatedBy,
+				p.Data.Attributes.Summary,
+			)
+		}),
+		fputil.ToEither[error, string],
+		E.Fold(
+			func(err error) T.Tuple2[error, string] {
+				return T.MakeTuple2(err, "")
+			},
+			func(data string) T.Tuple2[error, string] {
+				return T.MakeTuple2[error](nil, data)
+			},
+		),
+	)
+
+	if result.F1 != nil {
+		return result.F1
+	}
+
+	fmt.Println(result.F2)
+
+	return nil
+}
+
 // FetchPlasmid connects to the gRPC stock service and fetches a single plasmid by ID.
 func FetchPlasmid(_ context.Context, cmd *cli.Command) error {
-	conn, err := grpc.NewClient(
-		fmt.Sprintf("%s:%s", cmd.String("host"), cmd.String("port")),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		return fmt.Errorf("error connecting to gRPC server: %w", err)
-	}
-	defer conn.Close()
-
-	id := cmd.String("identifier")
-	client := stockpb.NewStockServiceClient(conn)
-	plasmid, err := client.GetPlasmid(context.Background(), &stockpb.StockId{Id: id})
-	if err != nil {
-		if status.Code(err) == codes.NotFound {
-			return fmt.Errorf("plasmid with identifier %s not found", id)
-		}
-		return fmt.Errorf("error fetching plasmid: %w", err)
-	}
-
-	fmt.Printf(
-		"%s %s %s %s \n",
-		plasmid.Data.Id,
-		plasmid.Data.Attributes.Name,
-		plasmid.Data.Attributes.CreatedBy,
-		plasmid.Data.Attributes.Summary,
-	)
-	return nil
+	return runFetchPlasmid(domain.ListPlasmidsConfig{
+		ServerAddr: cmd.String("host"),
+		Port:       cmd.String("port"),
+		PlasmidID:  cmd.String("identifier"),
+	})
 }
 
 // ListAllPlasmids implements the main pipeline for listing all plasmids paginated

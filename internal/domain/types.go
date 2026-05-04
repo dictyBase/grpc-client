@@ -19,6 +19,7 @@ type ListPlasmidsConfig struct {
 	Filter     string
 	Limit      int64
 	Cursor     int64
+	PlasmidID  string
 }
 
 // WithConnection enriches ListPlasmidsConfig with gRPC connection
