@@ -16,8 +16,8 @@ func main() { //nolint:funlen
 		Usage: "CLI for gRPC stock service operations",
 		Commands: []*cli.Command{
 			{
-				Name:  "plasmid",
-				Usage: "Plasmid-related operations on the stock API",
+				Name:  "search",
+				Usage: "Search for GoldenBraid plasmids in the stock API",
 				Commands: []*cli.Command{
 					{
 						Name:  "list-all",

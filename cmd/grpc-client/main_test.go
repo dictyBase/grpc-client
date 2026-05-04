@@ -14,10 +14,10 @@ func TestLookupSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 
 	var gotHost, gotPort string
 	app := &cli.Command{
-		Name: "plasmid",
+		Name: "search",
 		Commands: []*cli.Command{
 			{
-				Name: "plasmid",
+				Name: "search",
 				Commands: []*cli.Command{
 					{
 						Name: "lookup",
@@ -46,7 +46,7 @@ func TestLookupSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 		},
 	}
 
-	err := app.Run(context.Background(), []string{"app", "plasmid", "lookup", "--name", "pDGB_A1"})
+	err := app.Run(context.Background(), []string{"app", "search", "lookup", "--name", "pDGB_A1"})
 	require.NoError(t, err)
 	require.Equal(t, "stock-api.dev.svc", gotHost)
 	require.Equal(t, "9345", gotPort)
@@ -58,10 +58,10 @@ func TestListSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 
 	var gotHost, gotPort string
 	app := &cli.Command{
-		Name: "plasmid",
+		Name: "search",
 		Commands: []*cli.Command{
 			{
-				Name: "plasmid",
+				Name: "search",
 				Commands: []*cli.Command{
 					{
 						Name: "list",
@@ -90,7 +90,7 @@ func TestListSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 		},
 	}
 
-	err := app.Run(context.Background(), []string{"app", "plasmid", "list"})
+	err := app.Run(context.Background(), []string{"app", "search", "list"})
 	require.NoError(t, err)
 	require.Equal(t, "stock-api.dev.svc", gotHost)
 	require.Equal(t, "9345", gotPort)
@@ -105,7 +105,7 @@ func TestFetchSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 		Name: "goldenbraid-list",
 		Commands: []*cli.Command{
 			{
-				Name: "plasmid",
+				Name: "search",
 				Commands: []*cli.Command{
 					{
 						Name: "fetch",
@@ -138,7 +138,7 @@ func TestFetchSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 
 	err := app.Run(
 		context.Background(),
-		[]string{"app", "plasmid", "fetch", "--identifier", "DBP0000001"},
+		[]string{"app", "search", "fetch", "--identifier", "DBP0000001"},
 	)
 	require.NoError(t, err)
 	require.Equal(t, "stock-api.dev.svc", gotHost)
