@@ -86,6 +86,29 @@ func main() { //nolint:funlen
 						},
 						Action: client.LookupPlasmidByName,
 					},
+					{
+						Name:  "fetch",
+						Usage: "Fetch a single plasmid by its identifier",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:    "host",
+								Usage:   "gRPC server host address",
+								Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
+							},
+							&cli.StringFlag{
+								Name:    "port",
+								Usage:   "gRPC server port",
+								Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
+							},
+							&cli.StringFlag{
+								Name:     "identifier",
+								Aliases:  []string{"i"},
+								Usage:    "Identifier of the plasmid to fetch",
+								Required: true,
+							},
+						},
+						Action: client.FetchPlasmid,
+					},
 				},
 			},
 			{

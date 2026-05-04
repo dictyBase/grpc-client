@@ -17,7 +17,9 @@ import (
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/fputil"
 	"github.com/urfave/cli/v3"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
 // createConnection creates a gRPC connection
@@ -235,6 +237,37 @@ func runAllPlasmidList(cfg domain.ListPlasmidsConfig) error {
 
 	printTop10PlasmidResults(result.F2)
 
+	return nil
+}
+
+// FetchPlasmid connects to the gRPC stock service and fetches a single plasmid by ID.
+func FetchPlasmid(_ context.Context, cmd *cli.Command) error {
+	conn, err := grpc.NewClient(
+		fmt.Sprintf("%s:%s", cmd.String("host"), cmd.String("port")),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		return fmt.Errorf("error connecting to gRPC server: %w", err)
+	}
+	defer conn.Close()
+
+	id := cmd.String("identifier")
+	client := stockpb.NewStockServiceClient(conn)
+	plasmid, err := client.GetPlasmid(context.Background(), &stockpb.StockId{Id: id})
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return fmt.Errorf("plasmid with identifier %s not found", id)
+		}
+		return fmt.Errorf("error fetching plasmid: %w", err)
+	}
+
+	fmt.Printf(
+		"%s %s %s %s \n",
+		plasmid.Data.Id,
+		plasmid.Data.Attributes.Name,
+		plasmid.Data.Attributes.CreatedBy,
+		plasmid.Data.Attributes.Summary,
+	)
 	return nil
 }
 
