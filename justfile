@@ -70,6 +70,7 @@ run-list tag filter="summary=~GoldenBraid" k8s_config="" k8s_namespace="dev" env
             - name: goldenbraid-list
               image: {{ghcr_image}}:{{tag}}
               args:
+                - plasmid
                 - list
                 - --filter
                 - "{{filter}}"
@@ -96,6 +97,7 @@ run-lookup tag name limit="3":
             - name: goldenbraid-lookup
               image: {{ghcr_image}}:{{tag}}
               args:
+                - plasmid
                 - lookup
                 - --name
                 - "{{name}}"

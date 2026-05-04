@@ -13,74 +13,80 @@ import (
 func main() { //nolint:funlen
 	app := &cli.Command{
 		Name:  "goldenbraid-list",
-		Usage: "List GoldenBraid plasmids from stock API",
+		Usage: "CLI for gRPC stock service operations",
 		Commands: []*cli.Command{
 			{
-				Name:  "list-all",
-				Usage: "List all plasmids without filter, fetched 30 at a time",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:    "host",
-						Usage:   "gRPC server host address",
-						Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
+				Name:  "plasmid",
+				Usage: "Plasmid-related operations on the stock API",
+				Commands: []*cli.Command{
+					{
+						Name:  "list-all",
+						Usage: "List all plasmids without filter, fetched 30 at a time",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:    "host",
+								Usage:   "gRPC server host address",
+								Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
+							},
+							&cli.StringFlag{
+								Name:    "port",
+								Usage:   "gRPC server port",
+								Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
+							},
+						},
+						Action: client.ListAllPlasmids,
 					},
-					&cli.StringFlag{
-						Name:    "port",
-						Usage:   "gRPC server port",
-						Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
+					{
+						Name:  "list",
+						Usage: "List GoldenBraid plasmids matching a filter",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:    "host",
+								Usage:   "gRPC server host address",
+								Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
+							},
+							&cli.StringFlag{
+								Name:    "port",
+								Usage:   "gRPC server port",
+								Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
+							},
+							&cli.StringFlag{
+								Name:    "filter",
+								Usage:   "Filter string for the stock API",
+								Value:   "summary=~GoldenBraid",
+								Sources: cli.EnvVars("STOCK_API_FILTER"),
+							},
+						},
+						Action: client.ListPlasmids,
+					},
+					{
+						Name:  "lookup",
+						Usage: "Look up a GoldenBraid plasmid by exact name",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:    "host",
+								Usage:   "gRPC server host address",
+								Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
+							},
+							&cli.StringFlag{
+								Name:    "port",
+								Usage:   "gRPC server port",
+								Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
+							},
+							&cli.StringFlag{
+								Name:     "name",
+								Usage:    "Exact plasmid name to look up (e.g. pDGB3alpha1)",
+								Required: true,
+							},
+							&cli.IntFlag{
+								Name:  "limit",
+								Usage: "Limit for the number of results",
+								Value: client.DefaultLookupLimit,
+							},
+						},
+						Action: client.LookupPlasmidByName,
 					},
 				},
-				Action: client.ListAllPlasmids,
-			},
-			{
-				Name:  "list",
-				Usage: "List GoldenBraid plasmids matching a filter",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:    "host",
-						Usage:   "gRPC server host address",
-						Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
-					},
-					&cli.StringFlag{
-						Name:    "port",
-						Usage:   "gRPC server port",
-						Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
-					},
-					&cli.StringFlag{
-						Name:    "filter",
-						Usage:   "Filter string for the stock API",
-						Value:   "summary=~GoldenBraid",
-						Sources: cli.EnvVars("STOCK_API_FILTER"),
-					},
-				},
-				Action: client.ListPlasmids,
-			},
-			{
-				Name:  "lookup",
-				Usage: "Look up a GoldenBraid plasmid by exact name",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:    "host",
-						Usage:   "gRPC server host address",
-						Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
-					},
-					&cli.StringFlag{
-						Name:    "port",
-						Usage:   "gRPC server port",
-						Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
-					},
-					&cli.StringFlag{
-						Name:     "name",
-						Usage:    "Exact plasmid name to look up (e.g. pDGB3alpha1)",
-						Required: true,
-					},
-					&cli.IntFlag{
-						Name:  "limit",
-						Usage: "Limit for the number of results",
-						Value: client.DefaultLookupLimit,
-					},
-				},
-				Action: client.LookupPlasmidByName,
 			},
 			{
 				Name:  "wait-job",

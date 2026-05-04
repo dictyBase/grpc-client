@@ -17,31 +17,36 @@ func TestLookupSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 		Name: "goldenbraid-list",
 		Commands: []*cli.Command{
 			{
-				Name: "lookup",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:    "host",
-						Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
+				Name: "plasmid",
+				Commands: []*cli.Command{
+					{
+						Name: "lookup",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:    "host",
+								Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
+							},
+							&cli.StringFlag{
+								Name:    "port",
+								Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
+							},
+							&cli.StringFlag{
+								Name:     "name",
+								Required: true,
+							},
+						},
+						Action: func(_ context.Context, cmd *cli.Command) error {
+							gotHost = cmd.String("host")
+							gotPort = cmd.String("port")
+							return nil
+						},
 					},
-					&cli.StringFlag{
-						Name:    "port",
-						Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
-					},
-					&cli.StringFlag{
-						Name:     "name",
-						Required: true,
-					},
-				},
-				Action: func(_ context.Context, cmd *cli.Command) error {
-					gotHost = cmd.String("host")
-					gotPort = cmd.String("port")
-					return nil
 				},
 			},
 		},
 	}
 
-	err := app.Run(context.Background(), []string{"app", "lookup", "--name", "pDGB_A1"})
+	err := app.Run(context.Background(), []string{"app", "plasmid", "lookup", "--name", "pDGB_A1"})
 	require.NoError(t, err)
 	require.Equal(t, "stock-api.dev.svc", gotHost)
 	require.Equal(t, "9345", gotPort)
@@ -56,31 +61,36 @@ func TestListSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 		Name: "goldenbraid-list",
 		Commands: []*cli.Command{
 			{
-				Name: "list",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:    "host",
-						Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
+				Name: "plasmid",
+				Commands: []*cli.Command{
+					{
+						Name: "list",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:    "host",
+								Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
+							},
+							&cli.StringFlag{
+								Name:    "port",
+								Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
+							},
+							&cli.StringFlag{
+								Name:  "filter",
+								Value: "summary=~GoldenBraid",
+							},
+						},
+						Action: func(_ context.Context, cmd *cli.Command) error {
+							gotHost = cmd.String("host")
+							gotPort = cmd.String("port")
+							return nil
+						},
 					},
-					&cli.StringFlag{
-						Name:    "port",
-						Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
-					},
-					&cli.StringFlag{
-						Name:  "filter",
-						Value: "summary=~GoldenBraid",
-					},
-				},
-				Action: func(_ context.Context, cmd *cli.Command) error {
-					gotHost = cmd.String("host")
-					gotPort = cmd.String("port")
-					return nil
 				},
 			},
 		},
 	}
 
-	err := app.Run(context.Background(), []string{"app", "list"})
+	err := app.Run(context.Background(), []string{"app", "plasmid", "list"})
 	require.NoError(t, err)
 	require.Equal(t, "stock-api.dev.svc", gotHost)
 	require.Equal(t, "9345", gotPort)
