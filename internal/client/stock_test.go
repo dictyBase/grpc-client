@@ -3,6 +3,7 @@ package client
 import (
 	"testing"
 
+	annotationpb "github.com/dictyBase/go-genproto/dictybaseapis/annotation"
 	stockpb "github.com/dictyBase/go-genproto/dictybaseapis/stock"
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/domain"
 	"github.com/stretchr/testify/require"
@@ -205,6 +206,94 @@ func TestBuildStrainFilter(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := buildStrainFilter(tt.stype)
 			require.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func makeTestAnnotationData(
+	id, entryID, tag, ontology, value, createdBy string,
+	version int64,
+) *annotationpb.TaggedAnnotationCollection_Data {
+	return &annotationpb.TaggedAnnotationCollection_Data{
+		Id: id,
+		Attributes: &annotationpb.TaggedAnnotationAttributes{
+			EntryId:   entryID,
+			Tag:       tag,
+			Ontology:  ontology,
+			Value:     value,
+			CreatedBy: createdBy,
+			Version:   version,
+		},
+	}
+}
+
+func TestToAnnotationResults(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *annotationpb.TaggedAnnotationCollection
+		expected []domain.AnnotationResult
+	}{
+		{
+			name: "empty collection",
+			input: &annotationpb.TaggedAnnotationCollection{
+				Data: []*annotationpb.TaggedAnnotationCollection_Data{},
+			},
+			expected: []domain.AnnotationResult{},
+		},
+		{
+			name: "single annotation",
+			input: &annotationpb.TaggedAnnotationCollection{
+				Data: []*annotationpb.TaggedAnnotationCollection_Data{
+					makeTestAnnotationData("ann001", "DDB_G123", "GO:0005634", "cellular_component", "nucleus", "user@test.org", 1),
+				},
+			},
+			expected: []domain.AnnotationResult{
+				{
+					ID:        "ann001",
+					EntryID:   "DDB_G123",
+					Tag:       "GO:0005634",
+					Ontology:  "cellular_component",
+					Value:     "nucleus",
+					CreatedBy: "user@test.org",
+					Version:   1,
+				},
+			},
+		},
+		{
+			name: "multiple annotations",
+			input: &annotationpb.TaggedAnnotationCollection{
+				Data: []*annotationpb.TaggedAnnotationCollection_Data{
+					makeTestAnnotationData("ann001", "DDB_G123", "GO:0005634", "cellular_component", "nucleus", "user@test.org", 1),
+					makeTestAnnotationData("ann002", "DDB_G456", "GO:0005737", "cellular_component", "cytoplasm", "curator@test.org", 3),
+				},
+			},
+			expected: []domain.AnnotationResult{
+				{
+					ID:        "ann001",
+					EntryID:   "DDB_G123",
+					Tag:       "GO:0005634",
+					Ontology:  "cellular_component",
+					Value:     "nucleus",
+					CreatedBy: "user@test.org",
+					Version:   1,
+				},
+				{
+					ID:        "ann002",
+					EntryID:   "DDB_G456",
+					Tag:       "GO:0005737",
+					Ontology:  "cellular_component",
+					Value:     "cytoplasm",
+					CreatedBy: "curator@test.org",
+					Version:   3,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			results := ToAnnotationResults(tt.input)
+			require.Equal(t, tt.expected, results)
 		})
 	}
 }

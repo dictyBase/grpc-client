@@ -2,6 +2,7 @@ package domain
 
 import (
 	IOE "github.com/IBM/fp-go/v2/ioeither"
+	annotation "github.com/dictyBase/go-genproto/dictybaseapis/annotation"
 	stockpb "github.com/dictyBase/go-genproto/dictybaseapis/stock"
 	"google.golang.org/grpc"
 )
@@ -50,6 +51,17 @@ type StrainResult struct {
 	DictyStrainProperty string
 }
 
+// AnnotationResult represents a processed annotation from the API
+type AnnotationResult struct {
+	ID        string
+	EntryID   string
+	Tag       string
+	Ontology  string
+	Value     string
+	CreatedBy string
+	Version   int64
+}
+
 // Type aliases for IOEither-based functional composition
 // Following modware-import pattern for cleaner function signatures
 
@@ -67,3 +79,9 @@ type StrainCollectionIOE = IOE.IOEither[error, *stockpb.StrainCollection]
 
 // StrainResultsIOE represents an IO operation that produces a slice of StrainResult or an error
 type StrainResultsIOE = IOE.IOEither[error, []StrainResult]
+
+// AnnotationCollectionIOE represents an IO operation that produces a TaggedAnnotationCollection or an error
+type AnnotationCollectionIOE = IOE.IOEither[error, *annotation.TaggedAnnotationCollection]
+
+// AnnotationResultsIOE represents an IO operation that produces a slice of AnnotationResult or an error
+type AnnotationResultsIOE = IOE.IOEither[error, []AnnotationResult]

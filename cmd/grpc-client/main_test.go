@@ -269,3 +269,76 @@ func TestStrainFilterSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 	require.Equal(t, int64(5), gotLimit)
 	require.Equal(t, int64(10), gotCursor)
 }
+
+func TestAnnotationFindSubcommandPicksUpGRPCEnvVars(t *testing.T) {
+	t.Setenv("STOCK_API_SERVICE_HOST", "stock-api.dev.svc")
+	t.Setenv("STOCK_API_SERVICE_PORT", "9345")
+
+	var gotHost, gotPort, gotFilter string
+	var gotLimit, gotCursor int64
+	app := &cli.Command{
+		Name: "grpc-client",
+		Commands: []*cli.Command{
+			{
+				Name: "annotation",
+				Commands: []*cli.Command{
+					{
+						Name: "find",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:    "host",
+								Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
+							},
+							&cli.StringFlag{
+								Name:    "port",
+								Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
+							},
+							&cli.StringFlag{
+								Name:  "filter",
+								Value: "",
+							},
+							&cli.IntFlag{
+								Name:    "limit",
+								Aliases: []string{"l"},
+								Value:   10,
+							},
+							&cli.IntFlag{
+								Name:  "cursor",
+								Value: 0,
+							},
+						},
+						Action: func(_ context.Context, cmd *cli.Command) error {
+							gotHost = cmd.String("host")
+							gotPort = cmd.String("port")
+							gotFilter = cmd.String("filter")
+							gotLimit = int64(cmd.Int("limit"))
+							gotCursor = int64(cmd.Int("cursor"))
+							return nil
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := app.Run(
+		context.Background(),
+		[]string{
+			"app",
+			"annotation",
+			"find",
+			"--filter",
+			"ontology===cellular_component",
+			"--limit",
+			"20",
+			"--cursor",
+			"5",
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, "stock-api.dev.svc", gotHost)
+	require.Equal(t, "9345", gotPort)
+	require.Equal(t, "ontology===cellular_component", gotFilter)
+	require.Equal(t, int64(20), gotLimit)
+	require.Equal(t, int64(5), gotCursor)
+}

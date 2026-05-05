@@ -25,6 +25,7 @@ func buildCommandTree() *cli.Command {
 		Commands: []*cli.Command{
 			buildSearchCommands(),
 			buildStrainCommands(),
+			buildAnnotationCommands(),
 			buildWaitJobCommand(),
 		},
 	}
@@ -246,5 +247,51 @@ func buildWaitJobCommand() *cli.Command {
 			},
 		},
 		Action: wait.JobAction,
+	}
+}
+
+func buildAnnotationCommands() *cli.Command {
+	return &cli.Command{
+		Name:  "annotation",
+		Usage: "Annotation-related operations on the stock API",
+		Commands: []*cli.Command{
+			buildAnnotationFindCommand(),
+		},
+	}
+}
+
+func buildAnnotationFindCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "find",
+		Usage: "Find annotations matching a filter",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "host",
+				Usage:   "gRPC server host address",
+				Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
+			},
+			&cli.StringFlag{
+				Name:    "port",
+				Usage:   "gRPC server port",
+				Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
+			},
+			&cli.StringFlag{
+				Name:  "filter",
+				Usage: "Filter string for annotations (e.g. entry_id===DDB_G123;ontology===cellular_component)",
+				Value: "",
+			},
+			&cli.IntFlag{
+				Name:    "limit",
+				Aliases: []string{"l"},
+				Usage:   "Number of annotations to fetch",
+				Value:   client.DefaultAnnotationLimit,
+			},
+			&cli.IntFlag{
+				Name:  "cursor",
+				Usage: "Offset for fetching list of annotations",
+				Value: 0,
+			},
+		},
+		Action: client.FindAnnotation,
 	}
 }

@@ -20,3 +20,17 @@ func FormatPlasmidRecord(p domain.PlasmidResult) string {
 		trun30words(p.Summary),
 	)
 }
+
+// FormatAnnotationRecord formats a single annotation result as a display string.
+func FormatAnnotationRecord(a domain.AnnotationResult) string {
+	return fmt.Sprintf(
+		"ID: %s | Entry: %s | Tag: %s | Ontology: %s | Value: %s | By: %s | v%d",
+		a.ID,
+		a.EntryID,
+		a.Tag,
+		a.Ontology,
+		trun30words(a.Value),
+		a.CreatedBy,
+		a.Version,
+	)
+}

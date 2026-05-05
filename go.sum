@@ -1,3 +1,5 @@
+buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1 h1:s6hzCXtND/ICdGPTMGk7C+/BFlr2Jg5GyH0NKf4XGXg=
+buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1/go.mod h1:tvtbpgaVXZX4g6Pn+AnzFycuRK3MOz5HJfEGeEllXYM=
 github.com/IBM/fp-go/v2 v2.2.6 h1:A40Uha5nPuxH1S5Qfvaom2spD0HrjKNaFtUNz1HGnvY=
 github.com/IBM/fp-go/v2 v2.2.6/go.mod h1:qeDDz1ZovSRM5CFU20Tqx+lJ28YVHUNfn+5ABUxRygQ=
 github.com/Masterminds/semver/v3 v3.4.0 h1:Zog+i5UMtVoCU8oKka5P7i9q9HgrJeGzI9SA1Xbatp0=
