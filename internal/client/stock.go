@@ -8,6 +8,7 @@ import (
 
 	A "github.com/IBM/fp-go/v2/array"
 	E "github.com/IBM/fp-go/v2/either"
+	eq "github.com/IBM/fp-go/v2/eq"
 	fperrors "github.com/IBM/fp-go/v2/errors"
 	F "github.com/IBM/fp-go/v2/function"
 	IO "github.com/IBM/fp-go/v2/io"
@@ -24,6 +25,16 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 )
+
+const (
+	DefaultPlasmidLimit      = 1000
+	DefaultLookupLimit       = 3
+	TopRecordsLimit          = 10
+	BatchFetchLimit          = 30
+	DefaultStrainFilterLimit = 10
+)
+
+var strEq = eq.Equals(eq.FromStrictEquals[string]())
 
 // createConnection creates a gRPC connection
 func createConnection(
@@ -51,8 +62,6 @@ func createWithConnection(
 		}),
 	)
 }
-
-const DefaultPlasmidLimit = 1000
 
 // callListPlasmids executes gRPC ListPlasmids call using enriched context
 func callListPlasmids(
@@ -127,11 +136,11 @@ func ToPlasmidResults(
 ) []domain.PlasmidResult {
 	return F.Pipe1(
 		collection.Data,
-		A.Map(func(p *stockpb.PlasmidCollection_Data) domain.PlasmidResult {
+		A.Map(func(pdata *stockpb.PlasmidCollection_Data) domain.PlasmidResult {
 			return domain.PlasmidResult{
-				ID:      p.Id,
-				Name:    p.Attributes.GetName(),
-				Summary: p.Attributes.GetSummary(),
+				ID:      pdata.Id,
+				Name:    pdata.Attributes.GetName(),
+				Summary: pdata.Attributes.GetSummary(),
 			}
 		}),
 	)
@@ -201,13 +210,6 @@ func LookupPlasmidByName(_ context.Context, cmd *cli.Command) error {
 		Limit:      int64(cmd.Int("limit")),
 	})
 }
-
-const (
-	DefaultLookupLimit       = 3
-	TopRecordsLimit          = 10
-	BatchFetchLimit          = 30
-	DefaultStrainFilterLimit = 10
-)
 
 // callListPlasmidsLoop executes gRPC ListPlasmids calls in a loop using enriched context.
 func callListPlasmidsLoop(
@@ -305,13 +307,13 @@ func runFetchPlasmid(cfg domain.ListPlasmidsConfig) error {
 			fperrors.OnError("failed to create connection"),
 		),
 		IOE.Chain(callGetPlasmid),
-		IOE.Map[error](func(p *stockpb.Plasmid) string {
+		IOE.Map[error](func(pdata *stockpb.Plasmid) string {
 			return fmt.Sprintf(
 				"%s %s %s %s",
-				p.Data.Id,
-				p.Data.Attributes.Name,
-				p.Data.Attributes.CreatedBy,
-				p.Data.Attributes.Summary,
+				pdata.Data.Id,
+				pdata.Data.Attributes.Name,
+				pdata.Data.Attributes.CreatedBy,
+				pdata.Data.Attributes.Summary,
 			)
 		}),
 		fputil.ToEither,
@@ -506,18 +508,23 @@ func printStrainResults(results []domain.StrainResult, nextCursor int64) {
 	fmt.Printf("next-cursor:%d\n", nextCursor)
 }
 
-// validateStrainType returns an Option containing the config when the strain
-// type is found in the allowed list, or None otherwise.
-func validateStrainType(cfg domain.ListPlasmidsConfig) O.Option[domain.ListPlasmidsConfig] {
+func isAllowedStrainType(cfg domain.ListPlasmidsConfig) bool {
 	return F.Pipe1(
-		A.Head(
-			A.Filter(
-				func(s string) bool { return s == cfg.StrainType },
-			)(
-				domain.StrainFilterAllowed,
-			),
-		),
-		O.Map(F.Constant1[string](cfg)),
+		domain.StrainFilterAllowed,
+		A.Any(strEq(cfg.StrainType)),
+	)
+}
+
+func strainTypeValidation(cfg domain.ListPlasmidsConfig) domain.ConfigIOE {
+	return F.Pipe2(
+		cfg,
+		O.FromPredicate(isAllowedStrainType),
+		IOE.FromOption[domain.ListPlasmidsConfig](func() error {
+			return fmt.Errorf(
+				"strain type %s is not allowed",
+				cfg.StrainType,
+			)
+		}),
 	)
 }
 
@@ -525,18 +532,7 @@ func validateStrainType(cfg domain.ListPlasmidsConfig) O.Option[domain.ListPlasm
 func runFilterStrain(cfg domain.ListPlasmidsConfig) error {
 	result := F.Pipe7(
 		IOE.Of[error](cfg),
-		IOE.Chain(
-			func(c domain.ListPlasmidsConfig) IOE.IOEither[error, domain.ListPlasmidsConfig] {
-				return F.Pipe1(
-					validateStrainType(c),
-					IOE.FromOption[domain.ListPlasmidsConfig](
-						func() error {
-							return fmt.Errorf("strain type %s is not allowed", c.StrainType)
-						},
-					),
-				)
-			},
-		),
+		IOE.Chain(strainTypeValidation),
 		IOE.ChainFirstIOK[error](
 			IO.Logf[domain.ListPlasmidsConfig](
 				"Starting strain filtering: %+v",
