@@ -124,7 +124,7 @@ func ListAllPlasmids(_ context.Context, cmd *cli.Command) error {
 
 // FindAnnotation lists annotations matching a filter and prints the results.
 func FindAnnotation(_ context.Context, cmd *cli.Command) error {
-	return runFindAnnotation(domain.ListPlasmidsConfig{
+	return runFindAnnotation(AnnotationConfig{
 		ServerAddr: cmd.String("host"),
 		Port:       cmd.String("port"),
 		Filter:     cmd.String("filter"),

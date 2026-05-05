@@ -271,8 +271,8 @@ func TestStrainFilterSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 }
 
 func TestAnnotationFindSubcommandPicksUpGRPCEnvVars(t *testing.T) {
-	t.Setenv("STOCK_API_SERVICE_HOST", "stock-api.dev.svc")
-	t.Setenv("STOCK_API_SERVICE_PORT", "9345")
+	t.Setenv("ANNOTATION_API_SERVICE_HOST", "annotation-api.dev.svc")
+	t.Setenv("ANNOTATION_API_SERVICE_PORT", "9345")
 
 	var gotHost, gotPort, gotFilter string
 	var gotLimit, gotCursor int64
@@ -287,11 +287,11 @@ func TestAnnotationFindSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:    "host",
-								Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
+								Sources: cli.EnvVars("ANNOTATION_API_SERVICE_HOST"),
 							},
 							&cli.StringFlag{
 								Name:    "port",
-								Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
+								Sources: cli.EnvVars("ANNOTATION_API_SERVICE_PORT"),
 							},
 							&cli.StringFlag{
 								Name:  "filter",
@@ -336,7 +336,7 @@ func TestAnnotationFindSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Equal(t, "stock-api.dev.svc", gotHost)
+	require.Equal(t, "annotation-api.dev.svc", gotHost)
 	require.Equal(t, "9345", gotPort)
 	require.Equal(t, "ontology===cellular_component", gotFilter)
 	require.Equal(t, int64(20), gotLimit)

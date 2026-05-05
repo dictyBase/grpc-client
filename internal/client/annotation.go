@@ -15,13 +15,57 @@ import (
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/aggregation"
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/domain"
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/fputil"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const DefaultAnnotationLimit = 10
 
+// AnnotationConfig holds configuration for fetching annotations from the Annotation API
+type AnnotationConfig struct {
+	ServerAddr string
+	Port       string
+	Filter     string
+	Limit      int64
+	Cursor     int64
+}
+
+// annotationWithConnection enriches AnnotationConfig with a gRPC connection
+type annotationWithConnection struct {
+	AnnotationConfig
+	Connection *grpc.ClientConn
+}
+
+// createAnnotationConnection creates a gRPC connection for the annotation API
+func createAnnotationConnection(
+	cfg AnnotationConfig,
+) IOE.IOEither[error, *grpc.ClientConn] {
+	return IOE.TryCatchError(func() (*grpc.ClientConn, error) {
+		return grpc.NewClient(
+			fmt.Sprintf("%s:%s", cfg.ServerAddr, cfg.Port),
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		)
+	})
+}
+
+// createAnnotationWithConnection enriches annotation config with a gRPC connection.
+func createAnnotationWithConnection(
+	cfg AnnotationConfig,
+) IOE.IOEither[error, annotationWithConnection] {
+	return F.Pipe1(
+		createAnnotationConnection(cfg),
+		IOE.Map[error](func(conn *grpc.ClientConn) annotationWithConnection {
+			return annotationWithConnection{
+				AnnotationConfig: cfg,
+				Connection:       conn,
+			}
+		}),
+	)
+}
+
 // callListAnnotations executes gRPC ListAnnotations call using enriched context
 func callListAnnotations(
-	ctx domain.WithConnection,
+	ctx annotationWithConnection,
 ) IOE.IOEither[error, *annotationpb.TaggedAnnotationCollection] {
 	return F.Pipe1(
 		IOE.TryCatchError(func() (*annotationpb.TaggedAnnotationCollection, error) {
@@ -73,16 +117,16 @@ func printAnnotationResults(
 }
 
 // runFindAnnotation executes the full pipeline for finding annotations by filter.
-func runFindAnnotation(cfg domain.ListPlasmidsConfig) error {
+func runFindAnnotation(cfg AnnotationConfig) error {
 	result := F.Pipe6(
 		IOE.Of[error](cfg),
 		IOE.ChainFirstIOK[error](
-			IO.Logf[domain.ListPlasmidsConfig](
+			IO.Logf[AnnotationConfig](
 				"Finding annotations: %+v",
 			),
 		),
-		IOE.Chain(createWithConnection),
-		IOE.MapLeft[domain.WithConnection](
+		IOE.Chain(createAnnotationWithConnection),
+		IOE.MapLeft[annotationWithConnection](
 			fperrors.OnError("failed to create connection"),
 		),
 		IOE.Chain(callListAnnotations),
