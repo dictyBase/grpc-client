@@ -9,7 +9,6 @@ import (
 	eq "github.com/IBM/fp-go/v2/eq"
 	F "github.com/IBM/fp-go/v2/function"
 	IOE "github.com/IBM/fp-go/v2/ioeither"
-	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/domain"
 	"github.com/urfave/cli/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -29,7 +28,7 @@ var strEq = eq.Equals(eq.FromStrictEquals[string]())
 
 // createConnection creates a gRPC connection
 func createConnection(
-	cfg domain.ListPlasmidsConfig,
+	cfg StockConfig,
 ) IOE.IOEither[error, *grpc.ClientConn] {
 	return IOE.TryCatchError(func() (*grpc.ClientConn, error) {
 		return grpc.NewClient(
@@ -41,14 +40,14 @@ func createConnection(
 
 // createWithConnection enriches config with a gRPC connection.
 func createWithConnection(
-	cfg domain.ListPlasmidsConfig,
-) IOE.IOEither[error, domain.WithConnection] {
+	cfg StockConfig,
+) IOE.IOEither[error, StockWithConnection] {
 	return F.Pipe1(
 		createConnection(cfg),
-		IOE.Map[error](func(conn *grpc.ClientConn) domain.WithConnection {
-			return domain.WithConnection{
-				ListPlasmidsConfig: cfg,
-				Connection:         conn,
+		IOE.Map[error](func(conn *grpc.ClientConn) StockWithConnection {
+			return StockWithConnection{
+				StockConfig: cfg,
+				Connection:  conn,
 			}
 		}),
 	)
@@ -62,7 +61,7 @@ func isNotFoundError(err error) bool {
 // ListPlasmids implements the main pipeline for listing plasmids
 // It serves as the CLI Action runner
 func ListPlasmids(_ context.Context, cmd *cli.Command) error {
-	return runPlasmidList(domain.ListPlasmidsConfig{
+	return runPlasmidList(StockConfig{
 		ServerAddr: cmd.String("host"),
 		Port:       cmd.String("port"),
 		Filter:     cmd.String("filter"),
@@ -72,7 +71,7 @@ func ListPlasmids(_ context.Context, cmd *cli.Command) error {
 
 // LookupPlasmidByName looks up a plasmid by exact name using the plasmid_name filter.
 func LookupPlasmidByName(_ context.Context, cmd *cli.Command) error {
-	return runPlasmidList(domain.ListPlasmidsConfig{
+	return runPlasmidList(StockConfig{
 		ServerAddr: cmd.String("host"),
 		Port:       cmd.String("port"),
 		Filter:     fmt.Sprintf("plasmid_name===%s", cmd.String("name")),
@@ -82,7 +81,7 @@ func LookupPlasmidByName(_ context.Context, cmd *cli.Command) error {
 
 // FetchPlasmid connects to the gRPC stock service and fetches a single plasmid by ID.
 func FetchPlasmid(_ context.Context, cmd *cli.Command) error {
-	return runFetchPlasmid(domain.ListPlasmidsConfig{
+	return runFetchPlasmid(StockConfig{
 		ServerAddr: cmd.String("host"),
 		Port:       cmd.String("port"),
 		PlasmidID:  cmd.String("identifier"),
@@ -91,7 +90,7 @@ func FetchPlasmid(_ context.Context, cmd *cli.Command) error {
 
 // FetchStrain connects to the gRPC stock service and fetches a single strain by ID.
 func FetchStrain(_ context.Context, cmd *cli.Command) error {
-	return runFetchStrain(domain.ListPlasmidsConfig{
+	return runFetchStrain(StockConfig{
 		ServerAddr: cmd.String("host"),
 		Port:       cmd.String("port"),
 		StrainID:   cmd.String("identifier"),
@@ -101,7 +100,7 @@ func FetchStrain(_ context.Context, cmd *cli.Command) error {
 // FilterStrain filters strains by type and prints the results.
 func FilterStrain(_ context.Context, cmd *cli.Command) error {
 	stype := cmd.String("strain-type")
-	return runFilterStrain(domain.ListPlasmidsConfig{
+	return runFilterStrain(StockConfig{
 		ServerAddr: cmd.String("host"),
 		Port:       cmd.String("port"),
 		Filter:     buildStrainFilter(stype),
@@ -114,7 +113,7 @@ func FilterStrain(_ context.Context, cmd *cli.Command) error {
 // ListAllPlasmids implements the main pipeline for listing all plasmids paginated
 // It serves as the CLI Action runner
 func ListAllPlasmids(_ context.Context, cmd *cli.Command) error {
-	return runAllPlasmidList(domain.ListPlasmidsConfig{
+	return runAllPlasmidList(StockConfig{
 		ServerAddr: cmd.String("host"),
 		Port:       cmd.String("port"),
 		Filter:     "",

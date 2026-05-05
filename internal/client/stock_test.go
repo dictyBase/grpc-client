@@ -5,7 +5,7 @@ import (
 
 	annotationpb "github.com/dictyBase/go-genproto/dictybaseapis/annotation"
 	stockpb "github.com/dictyBase/go-genproto/dictybaseapis/stock"
-	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/domain"
+	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/aggregation"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,14 +23,14 @@ func TestToPlasmidResults(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    *stockpb.PlasmidCollection
-		expected []domain.PlasmidResult
+		expected []aggregation.PlasmidResult
 	}{
 		{
 			name: "empty collection",
 			input: &stockpb.PlasmidCollection{
 				Data: []*stockpb.PlasmidCollection_Data{},
 			},
-			expected: []domain.PlasmidResult{},
+			expected: []aggregation.PlasmidResult{},
 		},
 		{
 			name: "single plasmid",
@@ -39,7 +39,7 @@ func TestToPlasmidResults(t *testing.T) {
 					makeTestPlasmid("plas001", "TestPlasmid", "A test plasmid"),
 				},
 			},
-			expected: []domain.PlasmidResult{
+			expected: []aggregation.PlasmidResult{
 				{ID: "plas001", Name: "TestPlasmid", Summary: "A test plasmid"},
 			},
 		},
@@ -52,7 +52,7 @@ func TestToPlasmidResults(t *testing.T) {
 					makeTestPlasmid("plas003", "Plasmid3", "Third plasmid"),
 				},
 			},
-			expected: []domain.PlasmidResult{
+			expected: []aggregation.PlasmidResult{
 				{ID: "plas001", Name: "Plasmid1", Summary: "First plasmid"},
 				{ID: "plas002", Name: "Plasmid2", Summary: "Second plasmid"},
 				{ID: "plas003", Name: "Plasmid3", Summary: "Third plasmid"},
@@ -65,7 +65,7 @@ func TestToPlasmidResults(t *testing.T) {
 					makeTestPlasmid("plas004", "NoSummaryPlasmid", ""),
 				},
 			},
-			expected: []domain.PlasmidResult{
+			expected: []aggregation.PlasmidResult{
 				{ID: "plas004", Name: "NoSummaryPlasmid", Summary: ""},
 			},
 		},
@@ -118,14 +118,14 @@ func TestToStrainResults(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    *stockpb.StrainCollection
-		expected []domain.StrainResult
+		expected []aggregation.StrainResult
 	}{
 		{
 			name: "empty collection",
 			input: &stockpb.StrainCollection{
 				Data: []*stockpb.StrainCollection_Data{},
 			},
-			expected: []domain.StrainResult{},
+			expected: []aggregation.StrainResult{},
 		},
 		{
 			name: "single strain",
@@ -134,7 +134,7 @@ func TestToStrainResults(t *testing.T) {
 					makeTestStrainData("str001", "AX4", "user1", "D. discoideum", "REMI-seq"),
 				},
 			},
-			expected: []domain.StrainResult{
+			expected: []aggregation.StrainResult{
 				{
 					ID:                  "str001",
 					Label:               "AX4",
@@ -152,7 +152,7 @@ func TestToStrainResults(t *testing.T) {
 					makeTestStrainData("str002", "AX5", "user2", "D. discoideum", "general strain"),
 				},
 			},
-			expected: []domain.StrainResult{
+			expected: []aggregation.StrainResult{
 				{
 					ID:                  "str001",
 					Label:               "AX4",
@@ -231,14 +231,14 @@ func TestToAnnotationResults(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    *annotationpb.TaggedAnnotationCollection
-		expected []domain.AnnotationResult
+		expected []aggregation.AnnotationResult
 	}{
 		{
 			name: "empty collection",
 			input: &annotationpb.TaggedAnnotationCollection{
 				Data: []*annotationpb.TaggedAnnotationCollection_Data{},
 			},
-			expected: []domain.AnnotationResult{},
+			expected: []aggregation.AnnotationResult{},
 		},
 		{
 			name: "single annotation",
@@ -247,7 +247,7 @@ func TestToAnnotationResults(t *testing.T) {
 					makeTestAnnotationData("ann001", "DDB_G123", "GO:0005634", "cellular_component", "nucleus", "user@test.org", 1),
 				},
 			},
-			expected: []domain.AnnotationResult{
+			expected: []aggregation.AnnotationResult{
 				{
 					ID:        "ann001",
 					EntryID:   "DDB_G123",
@@ -267,7 +267,7 @@ func TestToAnnotationResults(t *testing.T) {
 					makeTestAnnotationData("ann002", "DDB_G456", "GO:0005737", "cellular_component", "cytoplasm", "curator@test.org", 3),
 				},
 			},
-			expected: []domain.AnnotationResult{
+			expected: []aggregation.AnnotationResult{
 				{
 					ID:        "ann001",
 					EntryID:   "DDB_G123",

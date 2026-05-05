@@ -13,7 +13,7 @@ import (
 	O "github.com/IBM/fp-go/v2/option"
 	T "github.com/IBM/fp-go/v2/tuple"
 	stockpb "github.com/dictyBase/go-genproto/dictybaseapis/stock"
-	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/domain"
+	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/aggregation"
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/fputil"
 )
 
@@ -44,7 +44,7 @@ func wrapFetchStrainError(strainID string) func(error) error {
 
 // callGetStrain executes gRPC GetStrain call using enriched context
 func callGetStrain(
-	ctx domain.WithConnection,
+	ctx StockWithConnection,
 ) IOE.IOEither[error, *stockpb.Strain] {
 	return F.Pipe1(
 		IOE.TryCatchError(func() (*stockpb.Strain, error) {
@@ -60,16 +60,16 @@ func callGetStrain(
 }
 
 // runFetchStrain executes the full pipeline for fetching a single strain by ID.
-func runFetchStrain(cfg domain.ListPlasmidsConfig) error {
+func runFetchStrain(cfg StockConfig) error {
 	result := F.Pipe7(
 		IOE.Of[error](cfg),
 		IOE.ChainFirstIOK[error](
-			IO.Logf[domain.ListPlasmidsConfig](
+			IO.Logf[StockConfig](
 				"Fetching strain by ID: %+v",
 			),
 		),
 		IOE.Chain(createWithConnection),
-		IOE.MapLeft[domain.WithConnection](
+		IOE.MapLeft[StockWithConnection](
 			fperrors.OnError("failed to create connection"),
 		),
 		IOE.Chain(callGetStrain),
@@ -110,9 +110,9 @@ func buildStrainFilter(stype string) string {
 	if stype == "all" {
 		return fmt.Sprintf("%s;tag==%s,tag==%s,tag==%s",
 			filter,
-			domain.StrainFilterAllowed[0],
-			domain.StrainFilterAllowed[1],
-			domain.StrainFilterAllowed[2],
+			aggregation.StrainFilterAllowed[0],
+			aggregation.StrainFilterAllowed[1],
+			aggregation.StrainFilterAllowed[2],
 		)
 	}
 	return fmt.Sprintf("%s;tag==%s", filter, stype)
@@ -120,7 +120,7 @@ func buildStrainFilter(stype string) string {
 
 // callListStrains executes gRPC ListStrains call using enriched context
 func callListStrains(
-	ctx domain.WithConnection,
+	ctx StockWithConnection,
 ) IOE.IOEither[error, *stockpb.StrainCollection] {
 	return F.Pipe1(
 		IOE.TryCatchError(func() (*stockpb.StrainCollection, error) {
@@ -140,11 +140,11 @@ func callListStrains(
 }
 
 // ToStrainResults converts protobuf collection to domain results
-func ToStrainResults(collection *stockpb.StrainCollection) []domain.StrainResult {
+func ToStrainResults(collection *stockpb.StrainCollection) []aggregation.StrainResult {
 	return F.Pipe1(
 		collection.Data,
-		A.Map(func(s *stockpb.StrainCollection_Data) domain.StrainResult {
-			return domain.StrainResult{
+		A.Map(func(s *stockpb.StrainCollection_Data) aggregation.StrainResult {
+			return aggregation.StrainResult{
 				ID:                  s.Id,
 				Label:               s.Attributes.GetLabel(),
 				CreatedBy:           s.Attributes.GetCreatedBy(),
@@ -156,7 +156,7 @@ func ToStrainResults(collection *stockpb.StrainCollection) []domain.StrainResult
 }
 
 // printStrainResults prints the strain results to stdout.
-func printStrainResults(results []domain.StrainResult, nextCursor int64) {
+func printStrainResults(results []aggregation.StrainResult, nextCursor int64) {
 	fmt.Printf("total strain fetched %d\n", len(results))
 	for _, s := range results {
 		fmt.Printf(
@@ -171,18 +171,18 @@ func printStrainResults(results []domain.StrainResult, nextCursor int64) {
 	fmt.Printf("next-cursor:%d\n", nextCursor)
 }
 
-func isAllowedStrainType(cfg domain.ListPlasmidsConfig) bool {
+func isAllowedStrainType(cfg StockConfig) bool {
 	return F.Pipe1(
-		domain.StrainFilterAllowed,
+		aggregation.StrainFilterAllowed,
 		A.Any(strEq(cfg.StrainType)),
 	)
 }
 
-func strainTypeValidation(cfg domain.ListPlasmidsConfig) domain.ConfigIOE {
+func strainTypeValidation(cfg StockConfig) IOE.IOEither[error, StockConfig] {
 	return F.Pipe2(
 		cfg,
 		O.FromPredicate(isAllowedStrainType),
-		IOE.FromOption[domain.ListPlasmidsConfig](func() error {
+		IOE.FromOption[StockConfig](func() error {
 			return fmt.Errorf(
 				"strain type %s is not allowed",
 				cfg.StrainType,
@@ -192,17 +192,17 @@ func strainTypeValidation(cfg domain.ListPlasmidsConfig) domain.ConfigIOE {
 }
 
 // runFilterStrain executes the full pipeline for filtering strains by type.
-func runFilterStrain(cfg domain.ListPlasmidsConfig) error {
+func runFilterStrain(cfg StockConfig) error {
 	result := F.Pipe7(
 		IOE.Of[error](cfg),
 		IOE.Chain(strainTypeValidation),
 		IOE.ChainFirstIOK[error](
-			IO.Logf[domain.ListPlasmidsConfig](
+			IO.Logf[StockConfig](
 				"Starting strain filtering: %+v",
 			),
 		),
 		IOE.Chain(createWithConnection),
-		IOE.MapLeft[domain.WithConnection](
+		IOE.MapLeft[StockWithConnection](
 			fperrors.OnError("failed to create connection"),
 		),
 		IOE.Chain(callListStrains),

@@ -13,7 +13,6 @@ import (
 	T "github.com/IBM/fp-go/v2/tuple"
 	annotationpb "github.com/dictyBase/go-genproto/dictybaseapis/annotation"
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/aggregation"
-	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/domain"
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/fputil"
 	"github.com/urfave/cli/v3"
 	"google.golang.org/grpc"
@@ -88,11 +87,11 @@ func callListAnnotations(
 // ToAnnotationResults converts protobuf collection to domain results
 func ToAnnotationResults(
 	collection *annotationpb.TaggedAnnotationCollection,
-) []domain.AnnotationResult {
+) []aggregation.AnnotationResult {
 	return F.Pipe1(
 		collection.Data,
-		A.Map(func(d *annotationpb.TaggedAnnotationCollection_Data) domain.AnnotationResult {
-			return domain.AnnotationResult{
+		A.Map(func(d *annotationpb.TaggedAnnotationCollection_Data) aggregation.AnnotationResult {
+			return aggregation.AnnotationResult{
 				ID:        d.Id,
 				EntryID:   d.Attributes.GetEntryId(),
 				Tag:       d.Attributes.GetTag(),
@@ -107,7 +106,7 @@ func ToAnnotationResults(
 
 // printAnnotationResults prints the annotation results to stdout.
 func printAnnotationResults(
-	results []domain.AnnotationResult,
+	results []aggregation.AnnotationResult,
 	nextCursor int64,
 ) {
 	fmt.Printf("total annotations fetched %d\n", len(results))

@@ -14,13 +14,12 @@ import (
 	T "github.com/IBM/fp-go/v2/tuple"
 	stockpb "github.com/dictyBase/go-genproto/dictybaseapis/stock"
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/aggregation"
-	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/domain"
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/fputil"
 )
 
 // callListPlasmids executes gRPC ListPlasmids call using enriched context
 func callListPlasmids(
-	ctx domain.WithConnection,
+	ctx StockWithConnection,
 ) IOE.IOEither[error, *stockpb.PlasmidCollection] {
 	return F.Pipe1(
 		IOE.TryCatchError(func() (*stockpb.PlasmidCollection, error) {
@@ -65,7 +64,7 @@ func wrapFetchPlasmidError(plasmidID string) func(error) error {
 
 // callGetPlasmid executes gRPC GetPlasmid call using enriched context
 func callGetPlasmid(
-	ctx domain.WithConnection,
+	ctx StockWithConnection,
 ) IOE.IOEither[error, *stockpb.Plasmid] {
 	return F.Pipe1(
 		IOE.TryCatchError(func() (*stockpb.Plasmid, error) {
@@ -83,11 +82,11 @@ func callGetPlasmid(
 // ToPlasmidResults converts protobuf collection to domain results
 func ToPlasmidResults(
 	collection *stockpb.PlasmidCollection,
-) []domain.PlasmidResult {
+) []aggregation.PlasmidResult {
 	return F.Pipe1(
 		collection.Data,
-		A.Map(func(pdata *stockpb.PlasmidCollection_Data) domain.PlasmidResult {
-			return domain.PlasmidResult{
+		A.Map(func(pdata *stockpb.PlasmidCollection_Data) aggregation.PlasmidResult {
+			return aggregation.PlasmidResult{
 				ID:      pdata.Id,
 				Name:    pdata.Attributes.GetName(),
 				Summary: pdata.Attributes.GetSummary(),
@@ -97,7 +96,7 @@ func ToPlasmidResults(
 }
 
 // printPlasmidResults prints the plasmid results to stdout.
-func printPlasmidResults(results []domain.PlasmidResult) {
+func printPlasmidResults(results []aggregation.PlasmidResult) {
 	lines := F.Pipe1(results, A.Map(aggregation.FormatPlasmidRecord))
 	fmt.Printf(">>> total %d records <<<\n", len(results))
 	for _, line := range lines {
@@ -106,26 +105,26 @@ func printPlasmidResults(results []domain.PlasmidResult) {
 }
 
 // runPlasmidList executes the full pipeline for a given config and prints results.
-func runPlasmidList(cfg domain.ListPlasmidsConfig) error {
+func runPlasmidList(cfg StockConfig) error {
 	result := F.Pipe7(
 		IOE.Of[error](cfg),
 		IOE.ChainFirstIOK[error](
-			IO.Logf[domain.ListPlasmidsConfig](
+			IO.Logf[StockConfig](
 				"Starting plasmid listing: %+v",
 			),
 		),
 		IOE.Chain(createWithConnection),
-		IOE.MapLeft[domain.WithConnection](
+		IOE.MapLeft[StockWithConnection](
 			fperrors.OnError("failed to create connection"),
 		),
 		IOE.Chain(callListPlasmids),
 		IOE.Map[error](ToPlasmidResults),
 		fputil.ToEither,
 		E.Fold(
-			func(err error) T.Tuple2[error, []domain.PlasmidResult] {
-				return T.MakeTuple2(err, []domain.PlasmidResult(nil))
+			func(err error) T.Tuple2[error, []aggregation.PlasmidResult] {
+				return T.MakeTuple2(err, []aggregation.PlasmidResult(nil))
 			},
-			func(data []domain.PlasmidResult) T.Tuple2[error, []domain.PlasmidResult] {
+			func(data []aggregation.PlasmidResult) T.Tuple2[error, []aggregation.PlasmidResult] {
 				return T.MakeTuple2[error](nil, data)
 			},
 		),
@@ -142,11 +141,11 @@ func runPlasmidList(cfg domain.ListPlasmidsConfig) error {
 
 // callListPlasmidsLoop executes gRPC ListPlasmids calls in a loop using enriched context.
 func callListPlasmidsLoop(
-	ctx domain.WithConnection,
-) IOE.IOEither[error, []domain.PlasmidResult] {
-	return IOE.TryCatchError(func() ([]domain.PlasmidResult, error) {
+	ctx StockWithConnection,
+) IOE.IOEither[error, []aggregation.PlasmidResult] {
+	return IOE.TryCatchError(func() ([]aggregation.PlasmidResult, error) {
 		defer ctx.Connection.Close()
-		var allResults []domain.PlasmidResult
+		var allResults []aggregation.PlasmidResult
 		cursor := int64(0)
 		client := stockpb.NewStockServiceClient(ctx.Connection)
 		for {
@@ -176,7 +175,7 @@ func callListPlasmidsLoop(
 }
 
 // printTop10PlasmidResults prints up to the top 10 plasmid results and shows total count.
-func printTop10PlasmidResults(results []domain.PlasmidResult) {
+func printTop10PlasmidResults(results []aggregation.PlasmidResult) {
 	fmt.Printf(">>> total %d records retrieved <<<\n", len(results))
 	top := results
 	if len(top) > TopRecordsLimit {
@@ -189,25 +188,25 @@ func printTop10PlasmidResults(results []domain.PlasmidResult) {
 }
 
 // runAllPlasmidList executes the full pipeline for listing all plasmids paginated.
-func runAllPlasmidList(cfg domain.ListPlasmidsConfig) error {
+func runAllPlasmidList(cfg StockConfig) error {
 	result := F.Pipe6(
 		IOE.Of[error](cfg),
 		IOE.ChainFirstIOK[error](
-			IO.Logf[domain.ListPlasmidsConfig](
+			IO.Logf[StockConfig](
 				"Starting paginated plasmid listing: %+v",
 			),
 		),
 		IOE.Chain(createWithConnection),
-		IOE.MapLeft[domain.WithConnection](
+		IOE.MapLeft[StockWithConnection](
 			fperrors.OnError("failed to create connection"),
 		),
 		IOE.Chain(callListPlasmidsLoop),
 		fputil.ToEither,
 		E.Fold(
-			func(err error) T.Tuple2[error, []domain.PlasmidResult] {
-				return T.MakeTuple2(err, []domain.PlasmidResult(nil))
+			func(err error) T.Tuple2[error, []aggregation.PlasmidResult] {
+				return T.MakeTuple2(err, []aggregation.PlasmidResult(nil))
 			},
-			func(data []domain.PlasmidResult) T.Tuple2[error, []domain.PlasmidResult] {
+			func(data []aggregation.PlasmidResult) T.Tuple2[error, []aggregation.PlasmidResult] {
 				return T.MakeTuple2[error](nil, data)
 			},
 		),
@@ -223,16 +222,16 @@ func runAllPlasmidList(cfg domain.ListPlasmidsConfig) error {
 }
 
 // runFetchPlasmid executes the full pipeline for fetching a single plasmid by ID.
-func runFetchPlasmid(cfg domain.ListPlasmidsConfig) error {
+func runFetchPlasmid(cfg StockConfig) error {
 	result := F.Pipe7(
 		IOE.Of[error](cfg),
 		IOE.ChainFirstIOK[error](
-			IO.Logf[domain.ListPlasmidsConfig](
+			IO.Logf[StockConfig](
 				"Fetching plasmid by ID: %+v",
 			),
 		),
 		IOE.Chain(createWithConnection),
-		IOE.MapLeft[domain.WithConnection](
+		IOE.MapLeft[StockWithConnection](
 			fperrors.OnError("failed to create connection"),
 		),
 		IOE.Chain(callGetPlasmid),
