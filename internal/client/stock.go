@@ -161,7 +161,7 @@ func runPlasmidList(cfg domain.ListPlasmidsConfig) error {
 		),
 		IOE.Chain(callListPlasmids),
 		IOE.Map[error](ToPlasmidResults),
-		fputil.ToEither[error, []domain.PlasmidResult],
+		fputil.ToEither,
 		E.Fold(
 			func(err error) T.Tuple2[error, []domain.PlasmidResult] {
 				return T.MakeTuple2(err, []domain.PlasmidResult(nil))
@@ -271,7 +271,7 @@ func runAllPlasmidList(cfg domain.ListPlasmidsConfig) error {
 			fperrors.OnError("failed to create connection"),
 		),
 		IOE.Chain(callListPlasmidsLoop),
-		fputil.ToEither[error, []domain.PlasmidResult],
+		fputil.ToEither,
 		E.Fold(
 			func(err error) T.Tuple2[error, []domain.PlasmidResult] {
 				return T.MakeTuple2(err, []domain.PlasmidResult(nil))
@@ -314,7 +314,7 @@ func runFetchPlasmid(cfg domain.ListPlasmidsConfig) error {
 				p.Data.Attributes.Summary,
 			)
 		}),
-		fputil.ToEither[error, string],
+		fputil.ToEither,
 		E.Fold(
 			func(err error) T.Tuple2[error, string] {
 				return T.MakeTuple2(err, "")
@@ -410,7 +410,7 @@ func runFetchStrain(cfg domain.ListPlasmidsConfig) error {
 				s.Data.Attributes.Genes,
 			)
 		}),
-		fputil.ToEither[error, string],
+		fputil.ToEither,
 		E.Fold(
 			func(err error) T.Tuple2[error, string] {
 				return T.MakeTuple2(err, "")
@@ -517,7 +517,7 @@ func validateStrainType(cfg domain.ListPlasmidsConfig) O.Option[domain.ListPlasm
 				domain.StrainFilterAllowed,
 			),
 		),
-		O.Map[string](F.Constant1[string](cfg)),
+		O.Map(F.Constant1[string](cfg)),
 	)
 }
 
@@ -529,7 +529,7 @@ func runFilterStrain(cfg domain.ListPlasmidsConfig) error {
 			func(c domain.ListPlasmidsConfig) IOE.IOEither[error, domain.ListPlasmidsConfig] {
 				return F.Pipe1(
 					validateStrainType(c),
-					IOE.FromOption[domain.ListPlasmidsConfig, error](
+					IOE.FromOption[domain.ListPlasmidsConfig](
 						func() error {
 							return fmt.Errorf("strain type %s is not allowed", c.StrainType)
 						},
@@ -547,7 +547,7 @@ func runFilterStrain(cfg domain.ListPlasmidsConfig) error {
 			fperrors.OnError("failed to create connection"),
 		),
 		IOE.Chain(callListStrains),
-		fputil.ToEither[error, *stockpb.StrainCollection],
+		fputil.ToEither,
 		E.Fold(
 			func(err error) T.Tuple2[error, *stockpb.StrainCollection] {
 				return T.MakeTuple2(err, (*stockpb.StrainCollection)(nil))

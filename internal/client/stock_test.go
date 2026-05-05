@@ -83,7 +83,7 @@ func BenchmarkToPlasmidResults(b *testing.B) {
 		Data: make([]*stockpb.PlasmidCollection_Data, 100),
 	}
 
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		collection.Data[i] = &stockpb.PlasmidCollection_Data{
 			Id: "plas" + string(rune(i)),
 			Attributes: &stockpb.PlasmidAttributes{
@@ -94,7 +94,7 @@ func BenchmarkToPlasmidResults(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_ = ToPlasmidResults(collection)
 	}
 }

@@ -57,7 +57,7 @@ func JobAction(_ context.Context, cmd *cli.Command) error {
 		IOE.Let[error](SetPollReady, computeDeadline),
 		IOE.Chain(pollUntilDone),
 		IOE.Map[error](extractState),
-		fputil.ToEither[error, JobState],
+		fputil.ToEither,
 		E.Chain(validateTerminalState),
 		E.Fold(
 			F.Identity[error],

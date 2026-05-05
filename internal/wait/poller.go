@@ -77,7 +77,7 @@ func pollUntilDone(ctx PollContext) IOE.IOEither[error, PollContext] {
 	return F.Pipe7(
 		ctx,
 		checkTimeout,
-		IOE.FromEither[error, PollContext],
+		IOE.FromEither,
 		IOE.Chain(FetchJob),
 		IOE.Map[error](ExtractJobCondition),
 		IOE.Chain(resolveState),

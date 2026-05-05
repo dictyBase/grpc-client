@@ -18,6 +18,7 @@ linters:
     - gosec
     - govet
     - gocognit
+    - intrange
     - ineffassign
     - importas
     - inamedparam
@@ -31,6 +32,7 @@ linters:
     - revive
     - recvcheck
     - staticcheck
+    - modernize
     - unconvert
     - usestdlibvars
     - unparam
