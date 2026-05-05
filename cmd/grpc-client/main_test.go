@@ -195,3 +195,77 @@ func TestStrainFetchSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 	require.Equal(t, "9345", gotPort)
 	require.Equal(t, "DBS0000001", gotID)
 }
+
+func TestStrainFilterSubcommandPicksUpGRPCEnvVars(t *testing.T) {
+	t.Setenv("STOCK_API_SERVICE_HOST", "stock-api.dev.svc")
+	t.Setenv("STOCK_API_SERVICE_PORT", "9345")
+
+	var gotHost, gotPort, gotType string
+	var gotLimit, gotCursor int64
+	app := &cli.Command{
+		Name: "grpc-client",
+		Commands: []*cli.Command{
+			{
+				Name: "strain",
+				Commands: []*cli.Command{
+					{
+						Name: "filter",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:    "host",
+								Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
+							},
+							&cli.StringFlag{
+								Name:    "port",
+								Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
+							},
+							&cli.StringFlag{
+								Name:    "strain-type",
+								Aliases: []string{"st"},
+								Value:   "all",
+							},
+							&cli.IntFlag{
+								Name:    "limit",
+								Aliases: []string{"l"},
+								Value:   10,
+							},
+							&cli.IntFlag{
+								Name:  "cursor",
+								Value: 0,
+							},
+						},
+						Action: func(_ context.Context, cmd *cli.Command) error {
+							gotHost = cmd.String("host")
+							gotPort = cmd.String("port")
+							gotType = cmd.String("strain-type")
+							gotLimit = int64(cmd.Int("limit"))
+							gotCursor = int64(cmd.Int("cursor"))
+							return nil
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := app.Run(
+		context.Background(),
+		[]string{
+			"app",
+			"strain",
+			"filter",
+			"--strain-type",
+			"general strain",
+			"--limit",
+			"5",
+			"--cursor",
+			"10",
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, "stock-api.dev.svc", gotHost)
+	require.Equal(t, "9345", gotPort)
+	require.Equal(t, "general strain", gotType)
+	require.Equal(t, int64(5), gotLimit)
+	require.Equal(t, int64(10), gotCursor)
+}

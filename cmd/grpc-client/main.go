@@ -151,7 +151,45 @@ func buildStrainCommands() *cli.Command {
 		Usage: "Strain-related operations on the stock API",
 		Commands: []*cli.Command{
 			buildStrainFetchCommand(),
+			buildStrainFilterCommand(),
 		},
+	}
+}
+
+func buildStrainFilterCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "filter",
+		Usage: "List strains by type filter (REMI-seq, general strain, bacterial strain, or all)",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "host",
+				Usage:   "gRPC server host address",
+				Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
+			},
+			&cli.StringFlag{
+				Name:    "port",
+				Usage:   "gRPC server port",
+				Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
+			},
+			&cli.StringFlag{
+				Name:    "strain-type",
+				Aliases: []string{"st"},
+				Usage:   "Type of strain to filter for (REMI-seq, general strain, bacterial strain, or all)",
+				Value:   "all",
+			},
+			&cli.IntFlag{
+				Name:    "limit",
+				Aliases: []string{"l"},
+				Usage:   "Number of strains to fetch",
+				Value:   client.DefaultStrainFilterLimit,
+			},
+			&cli.IntFlag{
+				Name:  "cursor",
+				Usage: "Offset for fetching list of strains",
+				Value: 0,
+			},
+		},
+		Action: client.FilterStrain,
 	}
 }
 

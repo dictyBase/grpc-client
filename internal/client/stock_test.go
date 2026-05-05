@@ -98,3 +98,113 @@ func BenchmarkToPlasmidResults(b *testing.B) {
 		_ = ToPlasmidResults(collection)
 	}
 }
+
+func makeTestStrainData(
+	id, label, createdBy, species, property string,
+) *stockpb.StrainCollection_Data {
+	return &stockpb.StrainCollection_Data{
+		Id: id,
+		Attributes: &stockpb.StrainAttributes{
+			Label:               label,
+			CreatedBy:           createdBy,
+			Species:             species,
+			DictyStrainProperty: property,
+		},
+	}
+}
+
+func TestToStrainResults(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *stockpb.StrainCollection
+		expected []domain.StrainResult
+	}{
+		{
+			name: "empty collection",
+			input: &stockpb.StrainCollection{
+				Data: []*stockpb.StrainCollection_Data{},
+			},
+			expected: []domain.StrainResult{},
+		},
+		{
+			name: "single strain",
+			input: &stockpb.StrainCollection{
+				Data: []*stockpb.StrainCollection_Data{
+					makeTestStrainData("str001", "AX4", "user1", "D. discoideum", "REMI-seq"),
+				},
+			},
+			expected: []domain.StrainResult{
+				{
+					ID:                  "str001",
+					Label:               "AX4",
+					CreatedBy:           "user1",
+					Species:             "D. discoideum",
+					DictyStrainProperty: "REMI-seq",
+				},
+			},
+		},
+		{
+			name: "multiple strains",
+			input: &stockpb.StrainCollection{
+				Data: []*stockpb.StrainCollection_Data{
+					makeTestStrainData("str001", "AX4", "user1", "D. discoideum", "REMI-seq"),
+					makeTestStrainData("str002", "AX5", "user2", "D. discoideum", "general strain"),
+				},
+			},
+			expected: []domain.StrainResult{
+				{
+					ID:                  "str001",
+					Label:               "AX4",
+					CreatedBy:           "user1",
+					Species:             "D. discoideum",
+					DictyStrainProperty: "REMI-seq",
+				},
+				{
+					ID:                  "str002",
+					Label:               "AX5",
+					CreatedBy:           "user2",
+					Species:             "D. discoideum",
+					DictyStrainProperty: "general strain",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			results := ToStrainResults(tt.input)
+			require.Equal(t, tt.expected, results)
+		})
+	}
+}
+
+func TestBuildStrainFilter(t *testing.T) {
+	tests := []struct {
+		name     string
+		stype    string
+		expected string
+	}{
+		{
+			name:     "REMI-seq",
+			stype:    "REMI-seq",
+			expected: "ontology==dicty_strain_property;tag==REMI-seq",
+		},
+		{
+			name:     "general strain",
+			stype:    "general strain",
+			expected: "ontology==dicty_strain_property;tag==general strain",
+		},
+		{
+			name:     "all",
+			stype:    "all",
+			expected: "ontology==dicty_strain_property;tag==REMI-seq,tag==general strain,tag==bacterial strain",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildStrainFilter(tt.stype)
+			require.Equal(t, tt.expected, got)
+		})
+	}
+}

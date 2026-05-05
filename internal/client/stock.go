@@ -203,9 +203,10 @@ func LookupPlasmidByName(_ context.Context, cmd *cli.Command) error {
 }
 
 const (
-	DefaultLookupLimit = 3
-	TopRecordsLimit    = 10
-	BatchFetchLimit    = 30
+	DefaultLookupLimit       = 3
+	TopRecordsLimit          = 10
+	BatchFetchLimit          = 30
+	DefaultStrainFilterLimit = 10
 )
 
 // callListPlasmidsLoop executes gRPC ListPlasmids calls in a loop using enriched context.
@@ -435,6 +436,156 @@ func FetchStrain(_ context.Context, cmd *cli.Command) error {
 		ServerAddr: cmd.String("host"),
 		Port:       cmd.String("port"),
 		StrainID:   cmd.String("identifier"),
+	})
+}
+
+// buildStrainFilter builds the filter string for listing strains by type.
+func buildStrainFilter(stype string) string {
+	filter := "ontology==dicty_strain_property"
+	if stype == "all" {
+		return fmt.Sprintf("%s;tag==%s,tag==%s,tag==%s",
+			filter,
+			domain.StrainFilterAllowed[0],
+			domain.StrainFilterAllowed[1],
+			domain.StrainFilterAllowed[2],
+		)
+	}
+	return fmt.Sprintf("%s;tag==%s", filter, stype)
+}
+
+// callListStrains executes gRPC ListStrains call using enriched context
+func callListStrains(
+	ctx domain.WithConnection,
+) IOE.IOEither[error, *stockpb.StrainCollection] {
+	return F.Pipe1(
+		IOE.TryCatchError(func() (*stockpb.StrainCollection, error) {
+			defer ctx.Connection.Close()
+			return stockpb.NewStockServiceClient(ctx.Connection).
+				ListStrains(context.Background(),
+					&stockpb.StockParameters{
+						Limit:  ctx.Limit,
+						Filter: ctx.Filter,
+						Cursor: ctx.Cursor,
+					})
+		}),
+		IOE.MapLeft[*stockpb.StrainCollection](
+			fperrors.OnError("failed to list strains"),
+		),
+	)
+}
+
+// ToStrainResults converts protobuf collection to domain results
+func ToStrainResults(collection *stockpb.StrainCollection) []domain.StrainResult {
+	return F.Pipe1(
+		collection.Data,
+		A.Map(func(s *stockpb.StrainCollection_Data) domain.StrainResult {
+			return domain.StrainResult{
+				ID:                  s.Id,
+				Label:               s.Attributes.GetLabel(),
+				CreatedBy:           s.Attributes.GetCreatedBy(),
+				Species:             s.Attributes.GetSpecies(),
+				DictyStrainProperty: s.Attributes.GetDictyStrainProperty(),
+			}
+		}),
+	)
+}
+
+// printStrainResults prints the strain results to stdout.
+func printStrainResults(results []domain.StrainResult, nextCursor int64) {
+	fmt.Printf("total strain fetched %d\n", len(results))
+	for _, s := range results {
+		fmt.Printf(
+			"%s %s %s %s %s\n",
+			s.ID,
+			s.Label,
+			s.CreatedBy,
+			s.Species,
+			s.DictyStrainProperty,
+		)
+	}
+	fmt.Printf("next-cursor:%d\n", nextCursor)
+}
+
+// validateStrainType returns an Option containing the config when the strain
+// type is found in the allowed list, or None otherwise.
+func validateStrainType(cfg domain.ListPlasmidsConfig) O.Option[domain.ListPlasmidsConfig] {
+	return F.Pipe1(
+		A.Head(
+			A.Filter(
+				func(s string) bool { return s == cfg.StrainType },
+			)(
+				domain.StrainFilterAllowed,
+			),
+		),
+		O.Map[string](F.Constant1[string](cfg)),
+	)
+}
+
+// runFilterStrain executes the full pipeline for filtering strains by type.
+func runFilterStrain(cfg domain.ListPlasmidsConfig) error {
+	result := F.Pipe7(
+		IOE.Of[error](cfg),
+		IOE.Chain(
+			func(c domain.ListPlasmidsConfig) IOE.IOEither[error, domain.ListPlasmidsConfig] {
+				return F.Pipe1(
+					validateStrainType(c),
+					IOE.FromOption[domain.ListPlasmidsConfig, error](
+						func() error {
+							return fmt.Errorf("strain type %s is not allowed", c.StrainType)
+						},
+					),
+				)
+			},
+		),
+		IOE.ChainFirstIOK[error](
+			IO.Logf[domain.ListPlasmidsConfig](
+				"Starting strain filtering: %+v",
+			),
+		),
+		IOE.Chain(createWithConnection),
+		IOE.MapLeft[domain.WithConnection](
+			fperrors.OnError("failed to create connection"),
+		),
+		IOE.Chain(callListStrains),
+		fputil.ToEither[error, *stockpb.StrainCollection],
+		E.Fold(
+			func(err error) T.Tuple2[error, *stockpb.StrainCollection] {
+				return T.MakeTuple2(err, (*stockpb.StrainCollection)(nil))
+			},
+			func(coll *stockpb.StrainCollection) T.Tuple2[error, *stockpb.StrainCollection] {
+				return T.MakeTuple2[error](nil, coll)
+			},
+		),
+	)
+
+	if result.F1 != nil {
+		return result.F1
+	}
+
+	if len(result.F2.Data) == 0 {
+		return fmt.Errorf("no strain found with filter %s", cfg.Filter)
+	}
+
+	results := ToStrainResults(result.F2)
+	nextCursor := int64(0)
+	if result.F2.Meta != nil {
+		nextCursor = result.F2.Meta.NextCursor
+	}
+	printStrainResults(results, nextCursor)
+
+	return nil
+}
+
+// FilterStrain filters strains by type and prints the results.
+func FilterStrain(_ context.Context, cmd *cli.Command) error {
+	stype := cmd.String("strain-type")
+	return runFilterStrain(domain.ListPlasmidsConfig{
+		ServerAddr: cmd.String("host"),
+		Port:       cmd.String("port"),
+		Filter:     buildStrainFilter(stype),
+		StrainType: stype,
+		Limit:      int64(cmd.Int("limit")),
+		Cursor:     int64(cmd.Int("cursor")),
 	})
 }
 

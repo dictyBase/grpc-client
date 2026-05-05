@@ -21,7 +21,11 @@ type ListPlasmidsConfig struct {
 	Cursor     int64
 	PlasmidID  string
 	StrainID   string
+	StrainType string
 }
+
+// StrainFilterAllowed holds the allowed strain type values for filtering.
+var StrainFilterAllowed = []string{"REMI-seq", "general strain", "bacterial strain", "all"}
 
 // WithConnection enriches ListPlasmidsConfig with gRPC connection
 // Pattern from modware-import plasmid_ontology.go WithPlasmid (lines 127-130)
@@ -37,6 +41,15 @@ type PlasmidResult struct {
 	Summary string
 }
 
+// StrainResult represents a processed strain from the API
+type StrainResult struct {
+	ID                  string
+	Label               string
+	CreatedBy           string
+	Species             string
+	DictyStrainProperty string
+}
+
 // Type aliases for IOEither-based functional composition
 // Following modware-import pattern for cleaner function signatures
 
@@ -48,3 +61,9 @@ type ResultsIOE = IOE.IOEither[error, []PlasmidResult]
 
 // CollectionIOE represents an IO operation that produces a PlasmidCollection or an error
 type CollectionIOE = IOE.IOEither[error, *stockpb.PlasmidCollection]
+
+// StrainCollectionIOE represents an IO operation that produces a StrainCollection or an error
+type StrainCollectionIOE = IOE.IOEither[error, *stockpb.StrainCollection]
+
+// StrainResultsIOE represents an IO operation that produces a slice of StrainResult or an error
+type StrainResultsIOE = IOE.IOEither[error, []StrainResult]
