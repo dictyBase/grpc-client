@@ -268,12 +268,12 @@ func buildAnnotationFindCommand() *cli.Command {
 			&cli.StringFlag{
 				Name:    "host",
 				Usage:   "gRPC server host address",
-				Sources: cli.EnvVars("STOCK_API_SERVICE_HOST"),
+				Sources: cli.EnvVars("ANNOTATION_API_SERVICE_HOST"),
 			},
 			&cli.StringFlag{
 				Name:    "port",
 				Usage:   "gRPC server port",
-				Sources: cli.EnvVars("STOCK_API_SERVICE_PORT"),
+				Sources: cli.EnvVars("ANNOTATION_API_SERVICE_PORT"),
 			},
 			&cli.StringFlag{
 				Name:  "filter",
