@@ -121,14 +121,3 @@ func ListAllPlasmids(_ context.Context, cmd *cli.Command) error {
 		Limit:      BatchFetchLimit,
 	})
 }
-
-// FindAnnotation lists annotations matching a filter and prints the results.
-func FindAnnotation(_ context.Context, cmd *cli.Command) error {
-	return runFindAnnotation(AnnotationConfig{
-		ServerAddr: cmd.String("host"),
-		Port:       cmd.String("port"),
-		Filter:     cmd.String("filter"),
-		Limit:      int64(cmd.Int("limit")),
-		Cursor:     int64(cmd.Int("cursor")),
-	})
-}

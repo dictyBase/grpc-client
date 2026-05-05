@@ -15,6 +15,7 @@ import (
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/aggregation"
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/domain"
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/fputil"
+	"github.com/urfave/cli/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -116,10 +117,16 @@ func printAnnotationResults(
 	fmt.Printf("next-cursor:%d\n", nextCursor)
 }
 
-// runFindAnnotation executes the full pipeline for finding annotations by filter.
-func runFindAnnotation(cfg AnnotationConfig) error {
+// FindAnnotation lists annotations matching a filter and prints the results.
+func FindAnnotation(_ context.Context, cmd *cli.Command) error {
 	result := F.Pipe6(
-		IOE.Of[error](cfg),
+		IOE.Of[error](AnnotationConfig{
+			ServerAddr: cmd.String("host"),
+			Port:       cmd.String("port"),
+			Filter:     cmd.String("filter"),
+			Limit:      int64(cmd.Int("limit")),
+			Cursor:     int64(cmd.Int("cursor")),
+		}),
 		IOE.ChainFirstIOK[error](
 			IO.Logf[AnnotationConfig](
 				"Finding annotations: %+v",
