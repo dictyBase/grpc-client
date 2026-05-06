@@ -423,3 +423,86 @@ func TestAnnotationFindSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 	require.Equal(t, int64(20), gotLimit)
 	require.Equal(t, int64(5), gotCursor)
 }
+
+func TestAnnotationGroupFindSubcommandPicksUpGRPCEnvVars(t *testing.T) {
+	t.Setenv("ANNOTATION_API_SERVICE_HOST", "annotation-api.dev.svc")
+	t.Setenv("ANNOTATION_API_SERVICE_PORT", "9345")
+
+	var gotHost, gotPort, gotIdentifier, gotTag, gotOntology string
+	var gotLimit, gotCursor int64
+	app := &cli.Command{
+		Name: "grpc-client",
+		Commands: []*cli.Command{
+			{
+				Name: "annotation",
+				Commands: []*cli.Command{
+					{
+						Name: "groupfind",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:    "host",
+								Sources: cli.EnvVars("ANNOTATION_API_SERVICE_HOST"),
+							},
+							&cli.StringFlag{
+								Name:    "port",
+								Sources: cli.EnvVars("ANNOTATION_API_SERVICE_PORT"),
+							},
+							&cli.StringFlag{
+								Name:     "identifier",
+								Aliases:  []string{"i"},
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:  "ontology",
+								Value: "",
+							},
+							&cli.StringFlag{
+								Name:  "tag",
+								Value: "",
+							},
+							&cli.IntFlag{
+								Name:    "limit",
+								Aliases: []string{"l"},
+								Value:   100,
+							},
+							&cli.IntFlag{
+								Name:  "cursor",
+								Value: 0,
+							},
+						},
+						Action: func(_ context.Context, cmd *cli.Command) error {
+							gotHost = cmd.String("host")
+							gotPort = cmd.String("port")
+							gotIdentifier = cmd.String("identifier")
+							gotTag = cmd.String("tag")
+							gotOntology = cmd.String("ontology")
+							gotLimit = int64(cmd.Int("limit"))
+							gotCursor = int64(cmd.Int("cursor"))
+							return nil
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := app.Run(
+		context.Background(),
+		[]string{
+			"app", "annotation", "groupfind",
+			"--identifier", "DDB_G123",
+			"--tag", "GO:0005634",
+			"--ontology", "cellular_component",
+			"--limit", "50",
+			"--cursor", "7",
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, "annotation-api.dev.svc", gotHost)
+	require.Equal(t, "9345", gotPort)
+	require.Equal(t, "DDB_G123", gotIdentifier)
+	require.Equal(t, "GO:0005634", gotTag)
+	require.Equal(t, "cellular_component", gotOntology)
+	require.Equal(t, int64(50), gotLimit)
+	require.Equal(t, int64(7), gotCursor)
+}

@@ -20,6 +20,14 @@ import (
 
 const DefaultAnnotationLimit = 10
 
+const DefaultAnnotationGroupLimit = 100
+
+// annotationCollection is a type alias for the tagged annotation collection tuple
+type annotationCollection = *annotationpb.TaggedAnnotationCollection
+
+// annotationGroupCollection is a type alias for the tagged annotation group collection tuple
+type annotationGroupCollection = *annotationpb.TaggedAnnotationGroupCollection
+
 // AnnotationConfig holds configuration for fetching annotations from the Annotation API
 type AnnotationConfig struct {
 	ServerAddr string
@@ -115,6 +123,83 @@ func printAnnotationResults(
 	fmt.Printf("next-cursor:%d\n", nextCursor)
 }
 
+// callListAnnotationGroups executes gRPC ListAnnotationGroups call using enriched context
+func callListAnnotationGroups(
+	ctx annotationWithConnection,
+) IOE.IOEither[error, *annotationpb.TaggedAnnotationGroupCollection] {
+	return F.Pipe1(
+		IOE.TryCatchError(func() (*annotationpb.TaggedAnnotationGroupCollection, error) {
+			defer ctx.Connection.Close()
+			return annotationpb.NewTaggedAnnotationServiceClient(ctx.Connection).
+				ListAnnotationGroups(context.Background(),
+					&annotationpb.ListGroupParameters{
+						Limit:  ctx.Limit,
+						Filter: ctx.Filter,
+						Cursor: ctx.Cursor,
+					})
+		}),
+		IOE.MapLeft[*annotationpb.TaggedAnnotationGroupCollection](
+			fperrors.OnError("failed to list annotation groups"),
+		),
+	)
+}
+
+// ToAnnotationGroupResults converts protobuf group collection to domain results
+func ToAnnotationGroupResults(
+	collection *annotationpb.TaggedAnnotationGroupCollection,
+) []domain.AnnotationGroupResult {
+	return F.Pipe1(
+		collection.Data,
+		A.Map(
+			func(d *annotationpb.TaggedAnnotationGroupCollection_Data) domain.AnnotationGroupResult {
+				return domain.AnnotationGroupResult{
+					GroupID: d.Group.GetGroupId(),
+					Annotations: F.Pipe1(
+						d.Group.Data,
+						A.Map(func(
+							a *annotationpb.TaggedAnnotationGroup_Data,
+						) domain.AnnotationResult {
+							return domain.AnnotationResult{
+								ID:        a.Id,
+								EntryID:   a.Attributes.GetEntryId(),
+								Tag:       a.Attributes.GetTag(),
+								Ontology:  a.Attributes.GetOntology(),
+								Value:     a.Attributes.GetValue(),
+								CreatedBy: a.Attributes.GetCreatedBy(),
+								Version:   a.Attributes.GetVersion(),
+							}
+						}),
+					),
+				}
+			},
+		),
+	)
+}
+
+// printAnnotationGroupResults prints the annotation group results to stdout.
+func printAnnotationGroupResults(
+	results []domain.AnnotationGroupResult,
+	nextCursor int64,
+) {
+	fmt.Printf("total groups %d\n", len(results))
+	for _, g := range results {
+		fmt.Print(domain.FormatAnnotationGroupRecord(g))
+	}
+	fmt.Printf("next-cursor:%d\n", nextCursor)
+}
+
+// buildAnnotationGroupFilter constructs the filter string for ListAnnotationGroups.
+func buildAnnotationGroupFilter(identifier, tag, ontology string) string {
+	filter := fmt.Sprintf("entry_id===%s", identifier)
+	if tag != "" {
+		filter += fmt.Sprintf(";tag===%s", tag)
+	}
+	if ontology != "" {
+		filter += fmt.Sprintf(";ontology===%s", ontology)
+	}
+	return filter
+}
+
 // FindAnnotation lists annotations matching a filter and prints the results.
 func FindAnnotation(_ context.Context, cmd *cli.Command) error {
 	result := F.Pipe6(
@@ -137,10 +222,10 @@ func FindAnnotation(_ context.Context, cmd *cli.Command) error {
 		IOE.Chain(callListAnnotations),
 		domain.ToEither,
 		E.Fold(
-			func(err error) T.Tuple2[error, *annotationpb.TaggedAnnotationCollection] {
-				return T.MakeTuple2(err, (*annotationpb.TaggedAnnotationCollection)(nil))
+			func(err error) T.Tuple2[error, annotationCollection] {
+				return T.MakeTuple2(err, annotationCollection(nil))
 			},
-			func(coll *annotationpb.TaggedAnnotationCollection) T.Tuple2[error, *annotationpb.TaggedAnnotationCollection] {
+			func(coll annotationCollection) T.Tuple2[error, annotationCollection] {
 				return T.MakeTuple2[error](nil, coll)
 			},
 		),
@@ -208,6 +293,55 @@ func FindByTag(_ context.Context, cmd *cli.Command) error {
 		nextCursor = result.F2.Meta.NextCursor
 	}
 	printAnnotationResults(results, nextCursor)
+
+	return nil
+}
+
+// FindAnnotationGroup retrieves annotation groups filtered by identifier, tag, and ontology.
+func FindAnnotationGroup(_ context.Context, cmd *cli.Command) error {
+	result := F.Pipe6(
+		IOE.Of[error](AnnotationConfig{
+			ServerAddr: cmd.String("host"),
+			Port:       cmd.String("port"),
+			Filter: buildAnnotationGroupFilter(
+				cmd.String("identifier"),
+				cmd.String("tag"),
+				cmd.String("ontology"),
+			),
+			Limit:  int64(cmd.Int("limit")),
+			Cursor: int64(cmd.Int("cursor")),
+		}),
+		IOE.ChainFirstIOK[error](
+			IO.Logf[AnnotationConfig](
+				"Finding annotation groups: %+v",
+			),
+		),
+		IOE.Chain(createAnnotationWithConnection),
+		IOE.MapLeft[annotationWithConnection](
+			fperrors.OnError("failed to create connection"),
+		),
+		IOE.Chain(callListAnnotationGroups),
+		domain.ToEither,
+		E.Fold(
+			func(err error) T.Tuple2[error, annotationGroupCollection] {
+				return T.MakeTuple2(err, annotationGroupCollection(nil))
+			},
+			func(coll annotationGroupCollection) T.Tuple2[error, annotationGroupCollection] {
+				return T.MakeTuple2[error](nil, coll)
+			},
+		),
+	)
+
+	if result.F1 != nil {
+		return result.F1
+	}
+
+	results := ToAnnotationGroupResults(result.F2)
+	nextCursor := int64(0)
+	if result.F2.Meta != nil {
+		nextCursor = result.F2.Meta.NextCursor
+	}
+	printAnnotationGroupResults(results, nextCursor)
 
 	return nil
 }

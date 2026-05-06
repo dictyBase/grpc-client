@@ -67,6 +67,12 @@ type AnnotationResult struct {
 	Version   int64
 }
 
+// AnnotationGroupResult represents a processed annotation group from the API
+type AnnotationGroupResult struct {
+	GroupID     string
+	Annotations []AnnotationResult
+}
+
 // Type aliases for IOEither-based functional composition
 // Following modware-import pattern for cleaner function signatures
 
@@ -90,6 +96,12 @@ type AnnotationCollectionIOE = IOE.IOEither[error, *annotation.TaggedAnnotationC
 
 // AnnotationResultsIOE represents an IO operation that produces a slice of AnnotationResult or an error
 type AnnotationResultsIOE = IOE.IOEither[error, []AnnotationResult]
+
+// AnnotationGroupCollectionIOE represents an IO operation that produces a TaggedAnnotationGroupCollection or an error
+type AnnotationGroupCollectionIOE = IOE.IOEither[error, *annotation.TaggedAnnotationGroupCollection]
+
+// AnnotationGroupResultsIOE represents an IO operation that produces a slice of AnnotationGroupResult or an error
+type AnnotationGroupResultsIOE = IOE.IOEither[error, []AnnotationGroupResult]
 
 const MaxSummaryWords = 30
 
@@ -131,4 +143,23 @@ func FormatAnnotationRecord(a AnnotationResult) string {
 		a.CreatedBy,
 		a.Version,
 	)
+}
+
+// FormatAnnotationGroupRecord formats an annotation group result as a display string.
+func FormatAnnotationGroupRecord(g AnnotationGroupResult) string {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "group-id %s\n=====\n", g.GroupID)
+	for _, a := range g.Annotations {
+		fmt.Fprintf(
+			&sb,
+			"id=> %s tag=> %s ontology=> %s entry=> %s value=> %s\n",
+			a.ID,
+			a.Tag,
+			a.Ontology,
+			a.EntryID,
+			trun30words(a.Value),
+		)
+	}
+	fmt.Fprintln(&sb)
+	return sb.String()
 }

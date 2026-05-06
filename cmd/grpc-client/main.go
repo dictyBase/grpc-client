@@ -257,6 +257,7 @@ func buildAnnotationCommands() *cli.Command {
 		Commands: []*cli.Command{
 			buildAnnotationFindCommand(),
 			buildAnnotationFindByTagCommand(),
+			buildAnnotationGroupFindCommand(),
 		},
 	}
 }
@@ -335,5 +336,52 @@ func buildAnnotationFindByTagCommand() *cli.Command {
 			},
 		},
 		Action: client.FindByTag,
+	}
+}
+
+func buildAnnotationGroupFindCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "groupfind",
+		Usage: "Retrieve annotation groups by identifier, optionally filtered by tag and ontology",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "host",
+				Usage:   "gRPC server host address",
+				Sources: cli.EnvVars("ANNOTATION_API_SERVICE_HOST"),
+			},
+			&cli.StringFlag{
+				Name:    "port",
+				Usage:   "gRPC server port",
+				Sources: cli.EnvVars("ANNOTATION_API_SERVICE_PORT"),
+			},
+			&cli.StringFlag{
+				Name:     "identifier",
+				Aliases:  []string{"i"},
+				Usage:    "Identifier that will be searched for annotation groups",
+				Required: true,
+			},
+			&cli.StringFlag{
+				Name:  "ontology",
+				Usage: "Ontology name (e.g. cellular_component, biological_process)",
+				Value: "",
+			},
+			&cli.StringFlag{
+				Name:  "tag",
+				Usage: "Tag or term name in the ontology (e.g. GO:0005634)",
+				Value: "",
+			},
+			&cli.IntFlag{
+				Name:    "limit",
+				Aliases: []string{"l"},
+				Usage:   "Number of annotation groups to fetch",
+				Value:   client.DefaultAnnotationGroupLimit,
+			},
+			&cli.IntFlag{
+				Name:  "cursor",
+				Usage: "Offset for fetching list of annotation groups",
+				Value: 0,
+			},
+		},
+		Action: client.FindAnnotationGroup,
 	}
 }
