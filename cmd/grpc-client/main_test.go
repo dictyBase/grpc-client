@@ -506,3 +506,68 @@ func TestAnnotationGroupFindSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 	require.Equal(t, int64(50), gotLimit)
 	require.Equal(t, int64(7), gotCursor)
 }
+
+func TestAnnotationRemoveSubcommandPicksUpGRPCEnvVars(t *testing.T) {
+	t.Setenv("ANNOTATION_API_SERVICE_HOST", "annotation-api.dev.svc")
+	t.Setenv("ANNOTATION_API_SERVICE_PORT", "9345")
+
+	var gotHost, gotPort, gotTag, gotIdentifier, gotOntology string
+	app := &cli.Command{
+		Name: "grpc-client",
+		Commands: []*cli.Command{
+			{
+				Name: "annotation",
+				Commands: []*cli.Command{
+					{
+						Name: "remove",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:    "host",
+								Sources: cli.EnvVars("ANNOTATION_API_SERVICE_HOST"),
+							},
+							&cli.StringFlag{
+								Name:    "port",
+								Sources: cli.EnvVars("ANNOTATION_API_SERVICE_PORT"),
+							},
+							&cli.StringFlag{
+								Name:     "tag",
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:     "identifier",
+								Aliases:  []string{"i"},
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:     "ontology",
+								Required: true,
+							},
+						},
+						Action: func(_ context.Context, cmd *cli.Command) error {
+							gotHost = cmd.String("host")
+							gotPort = cmd.String("port")
+							gotTag = cmd.String("tag")
+							gotIdentifier = cmd.String("identifier")
+							gotOntology = cmd.String("ontology")
+							return nil
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := app.Run(
+		context.Background(),
+		[]string{
+			"app", "annotation", "remove", "--tag", "GO:0005634",
+			"--identifier", "DDB_G123", "--ontology", "cellular_component",
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, "annotation-api.dev.svc", gotHost)
+	require.Equal(t, "9345", gotPort)
+	require.Equal(t, "GO:0005634", gotTag)
+	require.Equal(t, "DDB_G123", gotIdentifier)
+	require.Equal(t, "cellular_component", gotOntology)
+}

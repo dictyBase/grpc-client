@@ -258,6 +258,7 @@ func buildAnnotationCommands() *cli.Command {
 			buildAnnotationFindCommand(),
 			buildAnnotationFindByTagCommand(),
 			buildAnnotationGroupFindCommand(),
+			buildAnnotationRemoveCommand(),
 		},
 	}
 }
@@ -383,5 +384,41 @@ func buildAnnotationGroupFindCommand() *cli.Command {
 			},
 		},
 		Action: client.FindAnnotationGroup,
+	}
+}
+
+func buildAnnotationRemoveCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "remove",
+		Usage: "Delete an annotation by tag, identifier, and ontology",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "host",
+				Usage:   "gRPC server host address",
+				Sources: cli.EnvVars("ANNOTATION_API_SERVICE_HOST"),
+			},
+			&cli.StringFlag{
+				Name:    "port",
+				Usage:   "gRPC server port",
+				Sources: cli.EnvVars("ANNOTATION_API_SERVICE_PORT"),
+			},
+			&cli.StringFlag{
+				Name:     "tag",
+				Usage:    "Tag or term name in the ontology (e.g. GO:0005634)",
+				Required: true,
+			},
+			&cli.StringFlag{
+				Name:     "identifier",
+				Aliases:  []string{"i"},
+				Usage:    "Identifier that will be searched for annotation",
+				Required: true,
+			},
+			&cli.StringFlag{
+				Name:     "ontology",
+				Usage:    "Ontology name (e.g. cellular_component, biological_process)",
+				Required: true,
+			},
+		},
+		Action: client.RemoveAnnotation,
 	}
 }

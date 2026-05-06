@@ -35,6 +35,9 @@ type AnnotationConfig struct {
 	Filter     string
 	Limit      int64
 	Cursor     int64
+	Tag        string
+	Identifier string
+	Ontology   string
 }
 
 // annotationWithConnection enriches AnnotationConfig with a gRPC connection
@@ -342,6 +345,91 @@ func FindAnnotationGroup(_ context.Context, cmd *cli.Command) error {
 		nextCursor = result.F2.Meta.NextCursor
 	}
 	printAnnotationGroupResults(results, nextCursor)
+
+	return nil
+}
+
+// callRemoveAnnotation looks up an annotation by tag/identifier/ontology, then deletes it.
+func callRemoveAnnotation(
+	ctx annotationWithConnection,
+) IOE.IOEither[error, *annotationpb.TaggedAnnotation] {
+	return F.Pipe1(
+		IOE.TryCatchError(func() (*annotationpb.TaggedAnnotation, error) {
+			defer ctx.Connection.Close()
+			client := annotationpb.NewTaggedAnnotationServiceClient(ctx.Connection)
+			ta, err := client.GetEntryAnnotation(context.Background(),
+				&annotationpb.EntryAnnotationRequest{
+					Tag:      ctx.Tag,
+					EntryId:  ctx.Identifier,
+					Ontology: ctx.Ontology,
+				})
+			if err != nil {
+				return nil, fperrors.OnError("failed to get entry annotation")(err)
+			}
+			_, err = client.DeleteAnnotation(context.Background(),
+				&annotationpb.DeleteAnnotationRequest{
+					Id:    ta.Data.Id,
+					Purge: true,
+				})
+			if err != nil {
+				return nil, fperrors.OnError("failed to delete annotation")(err)
+			}
+			return ta, nil
+		}),
+		IOE.MapLeft[*annotationpb.TaggedAnnotation](
+			fperrors.OnError("error in removing annotation"),
+		),
+	)
+}
+
+// printRemovedAnnotation prints the details of a deleted annotation.
+func printRemovedAnnotation(ta *annotationpb.TaggedAnnotation) {
+	fmt.Printf(
+		"deleted tag=> %s ontology=> %s entry=> %s value=> %s rank=> %d\n",
+		ta.Data.Attributes.GetTag(),
+		ta.Data.Attributes.GetOntology(),
+		ta.Data.Attributes.GetEntryId(),
+		ta.Data.Attributes.GetValue(),
+		ta.Data.Attributes.GetRank(),
+	)
+}
+
+// RemoveAnnotation looks up and deletes an annotation by tag, identifier, and ontology.
+func RemoveAnnotation(_ context.Context, cmd *cli.Command) error {
+	result := F.Pipe6(
+		IOE.Of[error](AnnotationConfig{
+			ServerAddr: cmd.String("host"),
+			Port:       cmd.String("port"),
+			Tag:        cmd.String("tag"),
+			Identifier: cmd.String("identifier"),
+			Ontology:   cmd.String("ontology"),
+		}),
+		IOE.ChainFirstIOK[error](
+			IO.Logf[AnnotationConfig](
+				"Removing annotation: %+v",
+			),
+		),
+		IOE.Chain(createAnnotationWithConnection),
+		IOE.MapLeft[annotationWithConnection](
+			fperrors.OnError("failed to create connection"),
+		),
+		IOE.Chain(callRemoveAnnotation),
+		domain.ToEither,
+		E.Fold(
+			func(err error) T.Tuple2[error, *annotationpb.TaggedAnnotation] {
+				return T.MakeTuple2(err, (*annotationpb.TaggedAnnotation)(nil))
+			},
+			func(ta *annotationpb.TaggedAnnotation) T.Tuple2[error, *annotationpb.TaggedAnnotation] {
+				return T.MakeTuple2[error](nil, ta)
+			},
+		),
+	)
+
+	if result.F1 != nil {
+		return result.F1
+	}
+
+	printRemovedAnnotation(result.F2)
 
 	return nil
 }
