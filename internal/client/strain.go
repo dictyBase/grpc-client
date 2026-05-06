@@ -5,16 +5,12 @@ import (
 	"fmt"
 
 	A "github.com/IBM/fp-go/v2/array"
-	E "github.com/IBM/fp-go/v2/either"
 	fperrors "github.com/IBM/fp-go/v2/errors"
 	F "github.com/IBM/fp-go/v2/function"
-	IO "github.com/IBM/fp-go/v2/io"
 	IOE "github.com/IBM/fp-go/v2/ioeither"
 	O "github.com/IBM/fp-go/v2/option"
-	T "github.com/IBM/fp-go/v2/tuple"
 	stockpb "github.com/dictyBase/go-genproto/dictybaseapis/stock"
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/aggregation"
-	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/fputil"
 )
 
 // wrapFetchStrainError returns an error mapping function that
@@ -57,51 +53,6 @@ func callGetStrain(
 			wrapFetchStrainError(ctx.StrainID),
 		),
 	)
-}
-
-// runFetchStrain executes the full pipeline for fetching a single strain by ID.
-func runFetchStrain(cfg StockConfig) error {
-	result := F.Pipe7(
-		IOE.Of[error](cfg),
-		IOE.ChainFirstIOK[error](
-			IO.Logf[StockConfig](
-				"Fetching strain by ID: %+v",
-			),
-		),
-		IOE.Chain(createWithConnection),
-		IOE.MapLeft[StockWithConnection](
-			fperrors.OnError("failed to create connection"),
-		),
-		IOE.Chain(callGetStrain),
-		IOE.Map[error](func(s *stockpb.Strain) string {
-			return fmt.Sprintf(
-				"%s %s %s %s %s %s",
-				s.Data.Id,
-				s.Data.Attributes.Label,
-				s.Data.Attributes.CreatedBy,
-				s.Data.Attributes.Publications,
-				s.Data.Attributes.Species,
-				s.Data.Attributes.Genes,
-			)
-		}),
-		fputil.ToEither,
-		E.Fold(
-			func(err error) T.Tuple2[error, string] {
-				return T.MakeTuple2(err, "")
-			},
-			func(data string) T.Tuple2[error, string] {
-				return T.MakeTuple2[error](nil, data)
-			},
-		),
-	)
-
-	if result.F1 != nil {
-		return result.F1
-	}
-
-	fmt.Println(result.F2)
-
-	return nil
 }
 
 // buildStrainFilter builds the filter string for listing strains by type.
@@ -189,48 +140,4 @@ func strainTypeValidation(cfg StockConfig) IOE.IOEither[error, StockConfig] {
 			)
 		}),
 	)
-}
-
-// runFilterStrain executes the full pipeline for filtering strains by type.
-func runFilterStrain(cfg StockConfig) error {
-	result := F.Pipe7(
-		IOE.Of[error](cfg),
-		IOE.Chain(strainTypeValidation),
-		IOE.ChainFirstIOK[error](
-			IO.Logf[StockConfig](
-				"Starting strain filtering: %+v",
-			),
-		),
-		IOE.Chain(createWithConnection),
-		IOE.MapLeft[StockWithConnection](
-			fperrors.OnError("failed to create connection"),
-		),
-		IOE.Chain(callListStrains),
-		fputil.ToEither,
-		E.Fold(
-			func(err error) T.Tuple2[error, *stockpb.StrainCollection] {
-				return T.MakeTuple2(err, (*stockpb.StrainCollection)(nil))
-			},
-			func(coll *stockpb.StrainCollection) T.Tuple2[error, *stockpb.StrainCollection] {
-				return T.MakeTuple2[error](nil, coll)
-			},
-		),
-	)
-
-	if result.F1 != nil {
-		return result.F1
-	}
-
-	if len(result.F2.Data) == 0 {
-		return fmt.Errorf("no strain found with filter %s", cfg.Filter)
-	}
-
-	results := ToStrainResults(result.F2)
-	nextCursor := int64(0)
-	if result.F2.Meta != nil {
-		nextCursor = result.F2.Meta.NextCursor
-	}
-	printStrainResults(results, nextCursor)
-
-	return nil
 }

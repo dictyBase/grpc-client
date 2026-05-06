@@ -5,16 +5,12 @@ import (
 	"fmt"
 
 	A "github.com/IBM/fp-go/v2/array"
-	E "github.com/IBM/fp-go/v2/either"
 	fperrors "github.com/IBM/fp-go/v2/errors"
 	F "github.com/IBM/fp-go/v2/function"
-	IO "github.com/IBM/fp-go/v2/io"
 	IOE "github.com/IBM/fp-go/v2/ioeither"
 	O "github.com/IBM/fp-go/v2/option"
-	T "github.com/IBM/fp-go/v2/tuple"
 	stockpb "github.com/dictyBase/go-genproto/dictybaseapis/stock"
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/aggregation"
-	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/fputil"
 )
 
 // callListPlasmids executes gRPC ListPlasmids call using enriched context
@@ -104,41 +100,6 @@ func printPlasmidResults(results []aggregation.PlasmidResult) {
 	}
 }
 
-// runPlasmidList executes the full pipeline for a given config and prints results.
-func runPlasmidList(cfg StockConfig) error {
-	result := F.Pipe7(
-		IOE.Of[error](cfg),
-		IOE.ChainFirstIOK[error](
-			IO.Logf[StockConfig](
-				"Starting plasmid listing: %+v",
-			),
-		),
-		IOE.Chain(createWithConnection),
-		IOE.MapLeft[StockWithConnection](
-			fperrors.OnError("failed to create connection"),
-		),
-		IOE.Chain(callListPlasmids),
-		IOE.Map[error](ToPlasmidResults),
-		fputil.ToEither,
-		E.Fold(
-			func(err error) T.Tuple2[error, []aggregation.PlasmidResult] {
-				return T.MakeTuple2(err, []aggregation.PlasmidResult(nil))
-			},
-			func(data []aggregation.PlasmidResult) T.Tuple2[error, []aggregation.PlasmidResult] {
-				return T.MakeTuple2[error](nil, data)
-			},
-		),
-	)
-
-	if result.F1 != nil {
-		return result.F1
-	}
-
-	printPlasmidResults(result.F2)
-
-	return nil
-}
-
 // callListPlasmidsLoop executes gRPC ListPlasmids calls in a loop using enriched context.
 func callListPlasmidsLoop(
 	ctx StockWithConnection,
@@ -187,79 +148,4 @@ func printTop10PlasmidResults(results []aggregation.PlasmidResult) {
 	}
 }
 
-// runAllPlasmidList executes the full pipeline for listing all plasmids paginated.
-func runAllPlasmidList(cfg StockConfig) error {
-	result := F.Pipe6(
-		IOE.Of[error](cfg),
-		IOE.ChainFirstIOK[error](
-			IO.Logf[StockConfig](
-				"Starting paginated plasmid listing: %+v",
-			),
-		),
-		IOE.Chain(createWithConnection),
-		IOE.MapLeft[StockWithConnection](
-			fperrors.OnError("failed to create connection"),
-		),
-		IOE.Chain(callListPlasmidsLoop),
-		fputil.ToEither,
-		E.Fold(
-			func(err error) T.Tuple2[error, []aggregation.PlasmidResult] {
-				return T.MakeTuple2(err, []aggregation.PlasmidResult(nil))
-			},
-			func(data []aggregation.PlasmidResult) T.Tuple2[error, []aggregation.PlasmidResult] {
-				return T.MakeTuple2[error](nil, data)
-			},
-		),
-	)
-
-	if result.F1 != nil {
-		return result.F1
-	}
-
-	printTop10PlasmidResults(result.F2)
-
-	return nil
-}
-
-// runFetchPlasmid executes the full pipeline for fetching a single plasmid by ID.
-func runFetchPlasmid(cfg StockConfig) error {
-	result := F.Pipe7(
-		IOE.Of[error](cfg),
-		IOE.ChainFirstIOK[error](
-			IO.Logf[StockConfig](
-				"Fetching plasmid by ID: %+v",
-			),
-		),
-		IOE.Chain(createWithConnection),
-		IOE.MapLeft[StockWithConnection](
-			fperrors.OnError("failed to create connection"),
-		),
-		IOE.Chain(callGetPlasmid),
-		IOE.Map[error](func(pdata *stockpb.Plasmid) string {
-			return fmt.Sprintf(
-				"%s %s %s %s",
-				pdata.Data.Id,
-				pdata.Data.Attributes.Name,
-				pdata.Data.Attributes.CreatedBy,
-				pdata.Data.Attributes.Summary,
-			)
-		}),
-		fputil.ToEither,
-		E.Fold(
-			func(err error) T.Tuple2[error, string] {
-				return T.MakeTuple2(err, "")
-			},
-			func(data string) T.Tuple2[error, string] {
-				return T.MakeTuple2[error](nil, data)
-			},
-		),
-	)
-
-	if result.F1 != nil {
-		return result.F1
-	}
-
-	fmt.Println(result.F2)
-
-	return nil
-}
+// callListPlasmidsLoop executes gRPC ListPlasmids calls in a loop using enriched context.

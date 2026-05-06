@@ -227,8 +227,22 @@ func makeTestAnnotationData(
 	}
 }
 
-func TestToAnnotationResults(t *testing.T) {
-	tests := []struct {
+func toAnnotationResultsTests() []struct {
+	name     string
+	input    *annotationpb.TaggedAnnotationCollection
+	expected []aggregation.AnnotationResult
+} {
+	basic := toAnnotationResultsBasicTests()
+	multi := toAnnotationResultsMultiTests()
+	return append(basic, multi...)
+}
+
+func toAnnotationResultsBasicTests() []struct {
+	name     string
+	input    *annotationpb.TaggedAnnotationCollection
+	expected []aggregation.AnnotationResult
+} {
+	return []struct {
 		name     string
 		input    *annotationpb.TaggedAnnotationCollection
 		expected []aggregation.AnnotationResult
@@ -244,7 +258,15 @@ func TestToAnnotationResults(t *testing.T) {
 			name: "single annotation",
 			input: &annotationpb.TaggedAnnotationCollection{
 				Data: []*annotationpb.TaggedAnnotationCollection_Data{
-					makeTestAnnotationData("ann001", "DDB_G123", "GO:0005634", "cellular_component", "nucleus", "user@test.org", 1),
+					makeTestAnnotationData(
+						"ann001",
+						"DDB_G123",
+						"GO:0005634",
+						"cellular_component",
+						"nucleus",
+						"user@test.org",
+						1,
+					),
 				},
 			},
 			expected: []aggregation.AnnotationResult{
@@ -259,12 +281,41 @@ func TestToAnnotationResults(t *testing.T) {
 				},
 			},
 		},
+	}
+}
+
+func toAnnotationResultsMultiTests() []struct {
+	name     string
+	input    *annotationpb.TaggedAnnotationCollection
+	expected []aggregation.AnnotationResult
+} {
+	return []struct {
+		name     string
+		input    *annotationpb.TaggedAnnotationCollection
+		expected []aggregation.AnnotationResult
+	}{
 		{
 			name: "multiple annotations",
 			input: &annotationpb.TaggedAnnotationCollection{
 				Data: []*annotationpb.TaggedAnnotationCollection_Data{
-					makeTestAnnotationData("ann001", "DDB_G123", "GO:0005634", "cellular_component", "nucleus", "user@test.org", 1),
-					makeTestAnnotationData("ann002", "DDB_G456", "GO:0005737", "cellular_component", "cytoplasm", "curator@test.org", 3),
+					makeTestAnnotationData(
+						"ann001",
+						"DDB_G123",
+						"GO:0005634",
+						"cellular_component",
+						"nucleus",
+						"user@test.org",
+						1,
+					),
+					makeTestAnnotationData(
+						"ann002",
+						"DDB_G456",
+						"GO:0005737",
+						"cellular_component",
+						"cytoplasm",
+						"curator@test.org",
+						3,
+					),
 				},
 			},
 			expected: []aggregation.AnnotationResult{
@@ -289,8 +340,10 @@ func TestToAnnotationResults(t *testing.T) {
 			},
 		},
 	}
+}
 
-	for _, tt := range tests {
+func TestToAnnotationResults(t *testing.T) {
+	for _, tt := range toAnnotationResultsTests() {
 		t.Run(tt.name, func(t *testing.T) {
 			results := ToAnnotationResults(tt.input)
 			require.Equal(t, tt.expected, results)
