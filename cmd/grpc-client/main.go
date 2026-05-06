@@ -256,6 +256,7 @@ func buildAnnotationCommands() *cli.Command {
 		Usage: "Annotation-related operations on the stock API",
 		Commands: []*cli.Command{
 			buildAnnotationFindCommand(),
+			buildAnnotationFindByTagCommand(),
 		},
 	}
 }
@@ -293,5 +294,46 @@ func buildAnnotationFindCommand() *cli.Command {
 			},
 		},
 		Action: client.FindAnnotation,
+	}
+}
+
+func buildAnnotationFindByTagCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "findbytag",
+		Usage: "Find annotations filtered by tag and ontology",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "host",
+				Usage:   "gRPC server host address",
+				Sources: cli.EnvVars("ANNOTATION_API_SERVICE_HOST"),
+			},
+			&cli.StringFlag{
+				Name:    "port",
+				Usage:   "gRPC server port",
+				Sources: cli.EnvVars("ANNOTATION_API_SERVICE_PORT"),
+			},
+			&cli.StringFlag{
+				Name:  "ontology",
+				Usage: "Ontology name (e.g. cellular_component, biological_process)",
+				Value: "",
+			},
+			&cli.StringFlag{
+				Name:  "tag",
+				Usage: "Tag or term name in the ontology (e.g. GO:0005634)",
+				Value: "",
+			},
+			&cli.IntFlag{
+				Name:    "limit",
+				Aliases: []string{"l"},
+				Usage:   "Number of annotations to fetch",
+				Value:   client.DefaultAnnotationLimit,
+			},
+			&cli.IntFlag{
+				Name:  "cursor",
+				Usage: "Offset for fetching list of annotations",
+				Value: 0,
+			},
+		},
+		Action: client.FindByTag,
 	}
 }

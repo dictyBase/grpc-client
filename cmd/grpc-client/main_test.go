@@ -270,6 +270,87 @@ func TestStrainFilterSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 	require.Equal(t, int64(10), gotCursor)
 }
 
+func TestAnnotationFindByTagSubcommandPicksUpGRPCEnvVars(t *testing.T) {
+	t.Setenv("ANNOTATION_API_SERVICE_HOST", "annotation-api.dev.svc")
+	t.Setenv("ANNOTATION_API_SERVICE_PORT", "9345")
+
+	var gotHost, gotPort, gotOntology, gotTag string
+	var gotLimit, gotCursor int64
+	app := &cli.Command{
+		Name: "grpc-client",
+		Commands: []*cli.Command{
+			{
+				Name: "annotation",
+				Commands: []*cli.Command{
+					{
+						Name: "findbytag",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:    "host",
+								Sources: cli.EnvVars("ANNOTATION_API_SERVICE_HOST"),
+							},
+							&cli.StringFlag{
+								Name:    "port",
+								Sources: cli.EnvVars("ANNOTATION_API_SERVICE_PORT"),
+							},
+							&cli.StringFlag{
+								Name:  "ontology",
+								Value: "",
+							},
+							&cli.StringFlag{
+								Name:  "tag",
+								Value: "",
+							},
+							&cli.IntFlag{
+								Name:    "limit",
+								Aliases: []string{"l"},
+								Value:   10,
+							},
+							&cli.IntFlag{
+								Name:  "cursor",
+								Value: 0,
+							},
+						},
+						Action: func(_ context.Context, cmd *cli.Command) error {
+							gotHost = cmd.String("host")
+							gotPort = cmd.String("port")
+							gotOntology = cmd.String("ontology")
+							gotTag = cmd.String("tag")
+							gotLimit = int64(cmd.Int("limit"))
+							gotCursor = int64(cmd.Int("cursor"))
+							return nil
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := app.Run(
+		context.Background(),
+		[]string{
+			"app",
+			"annotation",
+			"findbytag",
+			"--ontology",
+			"cellular_component",
+			"--tag",
+			"GO:0005634",
+			"--limit",
+			"15",
+			"--cursor",
+			"3",
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, "annotation-api.dev.svc", gotHost)
+	require.Equal(t, "9345", gotPort)
+	require.Equal(t, "cellular_component", gotOntology)
+	require.Equal(t, "GO:0005634", gotTag)
+	require.Equal(t, int64(15), gotLimit)
+	require.Equal(t, int64(3), gotCursor)
+}
+
 func TestAnnotationFindSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 	t.Setenv("ANNOTATION_API_SERVICE_HOST", "annotation-api.dev.svc")
 	t.Setenv("ANNOTATION_API_SERVICE_PORT", "9345")

@@ -159,3 +159,55 @@ func FindAnnotation(_ context.Context, cmd *cli.Command) error {
 
 	return nil
 }
+
+// FindByTag lists annotations filtered by tag and ontology and prints the results.
+func FindByTag(_ context.Context, cmd *cli.Command) error {
+	result := F.Pipe6(
+		IOE.Of[error](AnnotationConfig{
+			ServerAddr: cmd.String("host"),
+			Port:       cmd.String("port"),
+			Filter: fmt.Sprintf(
+				"tag===%s;ontology===%s",
+				cmd.String("tag"),
+				cmd.String("ontology"),
+			),
+			Limit:  int64(cmd.Int("limit")),
+			Cursor: int64(cmd.Int("cursor")),
+		}),
+		IOE.ChainFirstIOK[error](
+			IO.Logf[AnnotationConfig](
+				"Finding annotations by tag: %+v",
+			),
+		),
+		IOE.Chain(createAnnotationWithConnection),
+		IOE.MapLeft[annotationWithConnection](
+			fperrors.OnError("failed to create connection"),
+		),
+		IOE.Chain(callListAnnotations),
+		domain.ToEither,
+		E.Fold(
+			func(err error) T.Tuple2[error, *annotationpb.TaggedAnnotationCollection] {
+				return T.MakeTuple2(
+					err,
+					(*annotationpb.TaggedAnnotationCollection)(nil),
+				)
+			},
+			func(coll *annotationpb.TaggedAnnotationCollection) T.Tuple2[error, *annotationpb.TaggedAnnotationCollection] {
+				return T.MakeTuple2[error](nil, coll)
+			},
+		),
+	)
+
+	if result.F1 != nil {
+		return result.F1
+	}
+
+	results := ToAnnotationResults(result.F2)
+	nextCursor := int64(0)
+	if result.F2.Meta != nil {
+		nextCursor = result.F2.Meta.NextCursor
+	}
+	printAnnotationResults(results, nextCursor)
+
+	return nil
+}
