@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/client"
-	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/wait"
+	"github.com/dictyBase/grpc-client/internal/client"
+	"github.com/dictyBase/grpc-client/internal/wait"
 	"github.com/urfave/cli/v3"
 )
 

@@ -15,8 +15,7 @@ import (
 	P "github.com/IBM/fp-go/v2/predicate"
 	T "github.com/IBM/fp-go/v2/tuple"
 	stockpb "github.com/dictyBase/go-genproto/dictybaseapis/stock"
-	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/aggregation"
-	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/fputil"
+	"github.com/dictyBase/grpc-client/internal/domain"
 	"github.com/urfave/cli/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -90,7 +89,7 @@ func ListPlasmids(_ context.Context, cmd *cli.Command) error {
 			fperrors.OnError("failed to create connection"),
 		),
 		IOE.Chain(callListPlasmids),
-		fputil.ToEither,
+		domain.ToEither,
 		E.Fold(
 			func(err error) T.Tuple2[error, *stockpb.PlasmidCollection] {
 				return T.MakeTuple2(err, (*stockpb.PlasmidCollection)(nil))
@@ -129,7 +128,7 @@ func LookupPlasmidByName(_ context.Context, cmd *cli.Command) error {
 			fperrors.OnError("failed to create connection"),
 		),
 		IOE.Chain(callListPlasmids),
-		fputil.ToEither,
+		domain.ToEither,
 		E.Fold(
 			func(err error) T.Tuple2[error, *stockpb.PlasmidCollection] {
 				return T.MakeTuple2(err, (*stockpb.PlasmidCollection)(nil))
@@ -176,7 +175,7 @@ func FetchPlasmid(_ context.Context, cmd *cli.Command) error {
 				pdata.Data.Attributes.Summary,
 			)
 		}),
-		fputil.ToEither,
+		domain.ToEither,
 		E.Fold(
 			func(err error) T.Tuple2[error, string] {
 				return T.MakeTuple2(err, "")
@@ -225,7 +224,7 @@ func FetchStrain(_ context.Context, cmd *cli.Command) error {
 				s.Data.Attributes.Genes,
 			)
 		}),
-		fputil.ToEither,
+		domain.ToEither,
 		E.Fold(
 			func(err error) T.Tuple2[error, string] {
 				return T.MakeTuple2(err, "")
@@ -268,7 +267,7 @@ func FilterStrain(_ context.Context, cmd *cli.Command) error {
 			fperrors.OnError("failed to create connection"),
 		),
 		IOE.Chain(callListStrains),
-		fputil.ToEither,
+		domain.ToEither,
 		E.Fold(
 			func(err error) T.Tuple2[error, *stockpb.StrainCollection] {
 				return T.MakeTuple2(err, (*stockpb.StrainCollection)(nil))
@@ -300,7 +299,7 @@ func FilterStrain(_ context.Context, cmd *cli.Command) error {
 // ListAllPlasmids implements the main pipeline for listing all plasmids paginated
 // It serves as the CLI Action runner
 func ListAllPlasmids(_ context.Context, cmd *cli.Command) error {
-	result := F.Pipe6(
+	either := F.Pipe5(
 		IOE.Of[error](StockConfig{
 			ServerAddr: cmd.String("host"),
 			Port:       cmd.String("port"),
@@ -317,16 +316,16 @@ func ListAllPlasmids(_ context.Context, cmd *cli.Command) error {
 			fperrors.OnError("failed to create connection"),
 		),
 		IOE.Chain(callListPlasmidsLoop),
-		fputil.ToEither,
-		E.Fold(
-			func(err error) T.Tuple2[error, []aggregation.PlasmidResult] {
-				return T.MakeTuple2(err, []aggregation.PlasmidResult(nil))
-			},
-			func(data []aggregation.PlasmidResult) T.Tuple2[error, []aggregation.PlasmidResult] {
-				return T.MakeTuple2[error](nil, data)
-			},
-		),
+		domain.ToEither,
 	)
+	result := E.Fold(
+		func(err error) T.Tuple2[error, []domain.PlasmidResult] {
+			return T.MakeTuple2(err, []domain.PlasmidResult(nil))
+		},
+		func(data []domain.PlasmidResult) T.Tuple2[error, []domain.PlasmidResult] {
+			return T.MakeTuple2[error](nil, data)
+		},
+	)(either)
 
 	if result.F1 != nil {
 		return result.F1

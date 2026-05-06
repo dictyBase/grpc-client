@@ -10,7 +10,7 @@ import (
 	IOE "github.com/IBM/fp-go/v2/ioeither"
 	O "github.com/IBM/fp-go/v2/option"
 	stockpb "github.com/dictyBase/go-genproto/dictybaseapis/stock"
-	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/aggregation"
+	"github.com/dictyBase/grpc-client/internal/domain"
 )
 
 // wrapFetchStrainError returns an error mapping function that
@@ -61,9 +61,9 @@ func buildStrainFilter(stype string) string {
 	if stype == "all" {
 		return fmt.Sprintf("%s;tag==%s,tag==%s,tag==%s",
 			filter,
-			aggregation.StrainFilterAllowed[0],
-			aggregation.StrainFilterAllowed[1],
-			aggregation.StrainFilterAllowed[2],
+			domain.StrainFilterAllowed[0],
+			domain.StrainFilterAllowed[1],
+			domain.StrainFilterAllowed[2],
 		)
 	}
 	return fmt.Sprintf("%s;tag==%s", filter, stype)
@@ -91,11 +91,11 @@ func callListStrains(
 }
 
 // ToStrainResults converts protobuf collection to domain results
-func ToStrainResults(collection *stockpb.StrainCollection) []aggregation.StrainResult {
+func ToStrainResults(collection *stockpb.StrainCollection) []domain.StrainResult {
 	return F.Pipe1(
 		collection.Data,
-		A.Map(func(s *stockpb.StrainCollection_Data) aggregation.StrainResult {
-			return aggregation.StrainResult{
+		A.Map(func(s *stockpb.StrainCollection_Data) domain.StrainResult {
+			return domain.StrainResult{
 				ID:                  s.Id,
 				Label:               s.Attributes.GetLabel(),
 				CreatedBy:           s.Attributes.GetCreatedBy(),
@@ -107,7 +107,7 @@ func ToStrainResults(collection *stockpb.StrainCollection) []aggregation.StrainR
 }
 
 // printStrainResults prints the strain results to stdout.
-func printStrainResults(results []aggregation.StrainResult, nextCursor int64) {
+func printStrainResults(results []domain.StrainResult, nextCursor int64) {
 	fmt.Printf("total strain fetched %d\n", len(results))
 	for _, s := range results {
 		fmt.Printf(
@@ -124,7 +124,7 @@ func printStrainResults(results []aggregation.StrainResult, nextCursor int64) {
 
 func isAllowedStrainType(cfg StockConfig) bool {
 	return F.Pipe1(
-		aggregation.StrainFilterAllowed,
+		domain.StrainFilterAllowed,
 		A.Any(strEq(cfg.StrainType)),
 	)
 }

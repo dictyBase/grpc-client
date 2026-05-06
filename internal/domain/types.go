@@ -1,6 +1,11 @@
 package domain
 
 import (
+	"fmt"
+	"strings"
+
+	E "github.com/IBM/fp-go/v2/either"
+	F "github.com/IBM/fp-go/v2/function"
 	IOE "github.com/IBM/fp-go/v2/ioeither"
 	annotation "github.com/dictyBase/go-genproto/dictybaseapis/annotation"
 	stockpb "github.com/dictyBase/go-genproto/dictybaseapis/stock"
@@ -85,3 +90,45 @@ type AnnotationCollectionIOE = IOE.IOEither[error, *annotation.TaggedAnnotationC
 
 // AnnotationResultsIOE represents an IO operation that produces a slice of AnnotationResult or an error
 type AnnotationResultsIOE = IOE.IOEither[error, []AnnotationResult]
+
+const MaxSummaryWords = 30
+
+// ToEither executes an IOEither effect and returns the resulting Either.
+func ToEither[ERR, A any](ioe IOE.IOEither[ERR, A]) E.Either[ERR, A] {
+	return ioe()
+}
+
+// TruncateWords truncates a string to the specified number of words.
+func TruncateWords(maxWords int, s string) string {
+	words := strings.Fields(s)
+	if len(words) > maxWords {
+		return strings.Join(words[:maxWords], " ") + "..."
+	}
+	return s
+}
+
+var trun30words = F.Curry2(TruncateWords)(MaxSummaryWords)
+
+// FormatPlasmidRecord formats a single plasmid result as a display string.
+func FormatPlasmidRecord(p PlasmidResult) string {
+	return fmt.Sprintf(
+		"ID: %s | Name: %s | Summary: %s",
+		p.ID,
+		p.Name,
+		trun30words(p.Summary),
+	)
+}
+
+// FormatAnnotationRecord formats a single annotation result as a display string.
+func FormatAnnotationRecord(a AnnotationResult) string {
+	return fmt.Sprintf(
+		"ID: %s | Entry: %s | Tag: %s | Ontology: %s | Value: %s | By: %s | v%d",
+		a.ID,
+		a.EntryID,
+		a.Tag,
+		a.Ontology,
+		trun30words(a.Value),
+		a.CreatedBy,
+		a.Version,
+	)
+}

@@ -8,7 +8,7 @@ import (
 	E "github.com/IBM/fp-go/v2/either"
 	F "github.com/IBM/fp-go/v2/function"
 	IOE "github.com/IBM/fp-go/v2/ioeither"
-	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/fputil"
+	"github.com/dictyBase/grpc-client/internal/domain"
 	"github.com/urfave/cli/v3"
 )
 
@@ -57,7 +57,7 @@ func JobAction(_ context.Context, cmd *cli.Command) error {
 		IOE.Let[error](SetPollReady, computeDeadline),
 		IOE.Chain(pollUntilDone),
 		IOE.Map[error](extractState),
-		fputil.ToEither,
+		domain.ToEither,
 		E.Chain(validateTerminalState),
 		E.Fold(
 			F.Identity[error],

@@ -1,4 +1,4 @@
-module github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid
+module github.com/dictyBase/grpc-client
 
 go 1.25.5
 

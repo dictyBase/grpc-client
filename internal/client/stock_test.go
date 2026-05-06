@@ -5,7 +5,7 @@ import (
 
 	annotationpb "github.com/dictyBase/go-genproto/dictybaseapis/annotation"
 	stockpb "github.com/dictyBase/go-genproto/dictybaseapis/stock"
-	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/aggregation"
+	"github.com/dictyBase/grpc-client/internal/domain"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,14 +23,14 @@ func TestToPlasmidResults(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    *stockpb.PlasmidCollection
-		expected []aggregation.PlasmidResult
+		expected []domain.PlasmidResult
 	}{
 		{
 			name: "empty collection",
 			input: &stockpb.PlasmidCollection{
 				Data: []*stockpb.PlasmidCollection_Data{},
 			},
-			expected: []aggregation.PlasmidResult{},
+			expected: []domain.PlasmidResult{},
 		},
 		{
 			name: "single plasmid",
@@ -39,7 +39,7 @@ func TestToPlasmidResults(t *testing.T) {
 					makeTestPlasmid("plas001", "TestPlasmid", "A test plasmid"),
 				},
 			},
-			expected: []aggregation.PlasmidResult{
+			expected: []domain.PlasmidResult{
 				{ID: "plas001", Name: "TestPlasmid", Summary: "A test plasmid"},
 			},
 		},
@@ -52,7 +52,7 @@ func TestToPlasmidResults(t *testing.T) {
 					makeTestPlasmid("plas003", "Plasmid3", "Third plasmid"),
 				},
 			},
-			expected: []aggregation.PlasmidResult{
+			expected: []domain.PlasmidResult{
 				{ID: "plas001", Name: "Plasmid1", Summary: "First plasmid"},
 				{ID: "plas002", Name: "Plasmid2", Summary: "Second plasmid"},
 				{ID: "plas003", Name: "Plasmid3", Summary: "Third plasmid"},
@@ -65,7 +65,7 @@ func TestToPlasmidResults(t *testing.T) {
 					makeTestPlasmid("plas004", "NoSummaryPlasmid", ""),
 				},
 			},
-			expected: []aggregation.PlasmidResult{
+			expected: []domain.PlasmidResult{
 				{ID: "plas004", Name: "NoSummaryPlasmid", Summary: ""},
 			},
 		},
@@ -118,14 +118,14 @@ func TestToStrainResults(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    *stockpb.StrainCollection
-		expected []aggregation.StrainResult
+		expected []domain.StrainResult
 	}{
 		{
 			name: "empty collection",
 			input: &stockpb.StrainCollection{
 				Data: []*stockpb.StrainCollection_Data{},
 			},
-			expected: []aggregation.StrainResult{},
+			expected: []domain.StrainResult{},
 		},
 		{
 			name: "single strain",
@@ -134,7 +134,7 @@ func TestToStrainResults(t *testing.T) {
 					makeTestStrainData("str001", "AX4", "user1", "D. discoideum", "REMI-seq"),
 				},
 			},
-			expected: []aggregation.StrainResult{
+			expected: []domain.StrainResult{
 				{
 					ID:                  "str001",
 					Label:               "AX4",
@@ -152,7 +152,7 @@ func TestToStrainResults(t *testing.T) {
 					makeTestStrainData("str002", "AX5", "user2", "D. discoideum", "general strain"),
 				},
 			},
-			expected: []aggregation.StrainResult{
+			expected: []domain.StrainResult{
 				{
 					ID:                  "str001",
 					Label:               "AX4",
@@ -230,7 +230,7 @@ func makeTestAnnotationData(
 func toAnnotationResultsTests() []struct {
 	name     string
 	input    *annotationpb.TaggedAnnotationCollection
-	expected []aggregation.AnnotationResult
+	expected []domain.AnnotationResult
 } {
 	basic := toAnnotationResultsBasicTests()
 	multi := toAnnotationResultsMultiTests()
@@ -240,19 +240,19 @@ func toAnnotationResultsTests() []struct {
 func toAnnotationResultsBasicTests() []struct {
 	name     string
 	input    *annotationpb.TaggedAnnotationCollection
-	expected []aggregation.AnnotationResult
+	expected []domain.AnnotationResult
 } {
 	return []struct {
 		name     string
 		input    *annotationpb.TaggedAnnotationCollection
-		expected []aggregation.AnnotationResult
+		expected []domain.AnnotationResult
 	}{
 		{
 			name: "empty collection",
 			input: &annotationpb.TaggedAnnotationCollection{
 				Data: []*annotationpb.TaggedAnnotationCollection_Data{},
 			},
-			expected: []aggregation.AnnotationResult{},
+			expected: []domain.AnnotationResult{},
 		},
 		{
 			name: "single annotation",
@@ -269,7 +269,7 @@ func toAnnotationResultsBasicTests() []struct {
 					),
 				},
 			},
-			expected: []aggregation.AnnotationResult{
+			expected: []domain.AnnotationResult{
 				{
 					ID:        "ann001",
 					EntryID:   "DDB_G123",
@@ -287,12 +287,12 @@ func toAnnotationResultsBasicTests() []struct {
 func toAnnotationResultsMultiTests() []struct {
 	name     string
 	input    *annotationpb.TaggedAnnotationCollection
-	expected []aggregation.AnnotationResult
+	expected []domain.AnnotationResult
 } {
 	return []struct {
 		name     string
 		input    *annotationpb.TaggedAnnotationCollection
-		expected []aggregation.AnnotationResult
+		expected []domain.AnnotationResult
 	}{
 		{
 			name: "multiple annotations",
@@ -318,7 +318,7 @@ func toAnnotationResultsMultiTests() []struct {
 					),
 				},
 			},
-			expected: []aggregation.AnnotationResult{
+			expected: []domain.AnnotationResult{
 				{
 					ID:        "ann001",
 					EntryID:   "DDB_G123",
