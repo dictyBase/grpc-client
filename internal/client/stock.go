@@ -12,6 +12,7 @@ import (
 	F "github.com/IBM/fp-go/v2/function"
 	IO "github.com/IBM/fp-go/v2/io"
 	IOE "github.com/IBM/fp-go/v2/ioeither"
+	P "github.com/IBM/fp-go/v2/predicate"
 	T "github.com/IBM/fp-go/v2/tuple"
 	stockpb "github.com/dictyBase/go-genproto/dictybaseapis/stock"
 	"github.com/dictyBase/learn-golang/grpc/plasmid/goldenbraid/internal/aggregation"
@@ -31,7 +32,16 @@ const (
 	DefaultStrainFilterLimit = 10
 )
 
-var strEq = eq.Equals(eq.FromStrictEquals[string]())
+var (
+	strEq = eq.Equals(eq.FromStrictEquals[string]())
+
+	isNotFoundError = F.Pipe1(
+		P.IsStrictEqual[codes.Code]()(codes.NotFound),
+		P.ContraMap(func(err error) codes.Code {
+			return status.Code(err)
+		}),
+	)
+)
 
 // createConnection creates a gRPC connection
 func createConnection(
@@ -58,11 +68,6 @@ func createWithConnection(
 			}
 		}),
 	)
-}
-
-// isNotFoundError checks if the given error is a gRPC NotFound error.
-func isNotFoundError(err error) bool {
-	return status.Code(err) == codes.NotFound
 }
 
 // ListPlasmids implements the main pipeline for listing plasmids
