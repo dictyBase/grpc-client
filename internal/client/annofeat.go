@@ -14,6 +14,7 @@ import (
 	IO "github.com/IBM/fp-go/v2/io"
 	IOE "github.com/IBM/fp-go/v2/ioeither"
 	O "github.com/IBM/fp-go/v2/option"
+	PR "github.com/IBM/fp-go/v2/pair"
 	P "github.com/IBM/fp-go/v2/predicate"
 	R "github.com/IBM/fp-go/v2/record"
 	T "github.com/IBM/fp-go/v2/tuple"
@@ -45,8 +46,8 @@ var (
 			splitOnEq,
 			O.FromPredicate(hasKeyValueParts),
 		),
-		O.Map(func(kv []string) T.Tuple2[string, string] {
-			return T.MakeTuple2(
+		O.Map(func(kv []string) PR.Pair[string, string] {
+			return PR.MakePair(
 				strings.TrimSpace(kv[0]),
 				strings.TrimSpace(kv[1]),
 			)
@@ -260,13 +261,11 @@ func GetFeatAnno(_ context.Context, cmd *cli.Command) error {
 }
 
 // parseProperties parses a comma-separated "key=value" string into a map.
-func parseProperties(raw string) map[string]string {
+func parseProperties(raw string) R.Record[string, string] {
 	return F.Pipe3(
 		raw,
 		splitByComma,
 		A.FilterMap(parseProperty),
-		A.Reduce(func(acc map[string]string, kv T.Tuple2[string, string]) map[string]string {
-			return R.UpsertAt(kv.F1, kv.F2)(acc)
-		}, map[string]string{}),
+		R.FromEntries[string, string],
 	)
 }
