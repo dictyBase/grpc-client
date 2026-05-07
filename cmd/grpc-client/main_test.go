@@ -571,3 +571,129 @@ func TestAnnotationRemoveSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 	require.Equal(t, "DDB_G123", gotIdentifier)
 	require.Equal(t, "cellular_component", gotOntology)
 }
+
+func TestAnnoFeatCreateSubcommandPicksUpGRPCEnvVars(t *testing.T) {
+	t.Setenv("ANNO_FEAT_API_SERVICE_HOST", "annofeat-api.dev.svc")
+	t.Setenv("ANNO_FEAT_API_SERVICE_PORT", "9345")
+
+	var gotHost, gotPort, gotID, gotName, gotCreatedBy, gotSynonyms, gotProperties string
+	app := &cli.Command{
+		Name: "grpc-client",
+		Commands: []*cli.Command{
+			{
+				Name: "annofeat",
+				Commands: []*cli.Command{
+					{
+						Name: "create",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:    "host",
+								Sources: cli.EnvVars("ANNO_FEAT_API_SERVICE_HOST"),
+							},
+							&cli.StringFlag{
+								Name:    "port",
+								Sources: cli.EnvVars("ANNO_FEAT_API_SERVICE_PORT"),
+							},
+							&cli.StringFlag{
+								Name:     "id",
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:     "name",
+								Required: true,
+							},
+							&cli.StringFlag{
+								Name:    "created-by",
+								Sources: cli.EnvVars("ANNO_FEAT_CREATED_BY"),
+							},
+							&cli.StringFlag{
+								Name: "synonyms",
+							},
+							&cli.StringFlag{
+								Name: "properties",
+							},
+						},
+						Action: func(_ context.Context, cmd *cli.Command) error {
+							gotHost = cmd.String("host")
+							gotPort = cmd.String("port")
+							gotID = cmd.String("id")
+							gotName = cmd.String("name")
+							gotCreatedBy = cmd.String("created-by")
+							gotSynonyms = cmd.String("synonyms")
+							gotProperties = cmd.String("properties")
+							return nil
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := app.Run(
+		context.Background(),
+		[]string{
+			"app", "annofeat", "create",
+			"--id", "DDB_G0285425",
+			"--name", "Test Feature",
+			"--synonyms", "test1,test2",
+			"--properties", "description=Test description,note=Test note",
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, "annofeat-api.dev.svc", gotHost)
+	require.Equal(t, "9345", gotPort)
+	require.Equal(t, "DDB_G0285425", gotID)
+	require.Equal(t, "Test Feature", gotName)
+	require.Equal(t, "", gotCreatedBy)
+	require.Equal(t, "test1,test2", gotSynonyms)
+	require.Equal(t, "description=Test description,note=Test note", gotProperties)
+}
+
+func TestAnnoFeatGetSubcommandPicksUpGRPCEnvVars(t *testing.T) {
+	t.Setenv("ANNO_FEAT_API_SERVICE_HOST", "annofeat-api.dev.svc")
+	t.Setenv("ANNO_FEAT_API_SERVICE_PORT", "9345")
+
+	var gotHost, gotPort, gotID string
+	app := &cli.Command{
+		Name: "grpc-client",
+		Commands: []*cli.Command{
+			{
+				Name: "annofeat",
+				Commands: []*cli.Command{
+					{
+						Name: "get",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:    "host",
+								Sources: cli.EnvVars("ANNO_FEAT_API_SERVICE_HOST"),
+							},
+							&cli.StringFlag{
+								Name:    "port",
+								Sources: cli.EnvVars("ANNO_FEAT_API_SERVICE_PORT"),
+							},
+							&cli.StringFlag{
+								Name:     "id",
+								Required: true,
+							},
+						},
+						Action: func(_ context.Context, cmd *cli.Command) error {
+							gotHost = cmd.String("host")
+							gotPort = cmd.String("port")
+							gotID = cmd.String("id")
+							return nil
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := app.Run(
+		context.Background(),
+		[]string{"app", "annofeat", "get", "--id", "DDB_G0285425"},
+	)
+	require.NoError(t, err)
+	require.Equal(t, "annofeat-api.dev.svc", gotHost)
+	require.Equal(t, "9345", gotPort)
+	require.Equal(t, "DDB_G0285425", gotID)
+}

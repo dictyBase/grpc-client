@@ -26,6 +26,7 @@ func buildCommandTree() *cli.Command {
 			buildSearchCommands(),
 			buildStrainCommands(),
 			buildAnnotationCommands(),
+			buildAnnofeatCommands(),
 			buildWaitJobCommand(),
 		},
 	}
@@ -217,6 +218,85 @@ func buildStrainFetchCommand() *cli.Command {
 			},
 		},
 		Action: client.FetchStrain,
+	}
+}
+
+func buildAnnofeatCommands() *cli.Command {
+	return &cli.Command{
+		Name:  "annofeat",
+		Usage: "Feature annotation operations on the annotation feature service",
+		Commands: []*cli.Command{
+			buildAnnoFeatCreateCommand(),
+			buildAnnoFeatGetCommand(),
+		},
+	}
+}
+
+func buildAnnoFeatCreateCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "create",
+		Usage: "Create a new feature annotation",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "host",
+				Usage:   "gRPC server host address",
+				Sources: cli.EnvVars("ANNO_FEAT_API_SERVICE_HOST"),
+			},
+			&cli.StringFlag{
+				Name:    "port",
+				Usage:   "gRPC server port",
+				Sources: cli.EnvVars("ANNO_FEAT_API_SERVICE_PORT"),
+			},
+			&cli.StringFlag{
+				Name:     "id",
+				Usage:    "Feature ID (e.g. DDB_G0285425)",
+				Required: true,
+			},
+			&cli.StringFlag{
+				Name:     "name",
+				Usage:    "Feature name",
+				Required: true,
+			},
+			&cli.StringFlag{
+				Name:    "created-by",
+				Usage:   "Email of the user creating the feature annotation",
+				Sources: cli.EnvVars("ANNO_FEAT_CREATED_BY"),
+			},
+			&cli.StringFlag{
+				Name:  "synonyms",
+				Usage: "Comma-separated list of synonyms",
+			},
+			&cli.StringFlag{
+				Name:  "properties",
+				Usage: "Comma-separated key=value pairs (e.g. description=test,note=info)",
+			},
+		},
+		Action: client.CreateFeatAnno,
+	}
+}
+
+func buildAnnoFeatGetCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "get",
+		Usage: "Retrieve a feature annotation by ID",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "host",
+				Usage:   "gRPC server host address",
+				Sources: cli.EnvVars("ANNO_FEAT_API_SERVICE_HOST"),
+			},
+			&cli.StringFlag{
+				Name:    "port",
+				Usage:   "gRPC server port",
+				Sources: cli.EnvVars("ANNO_FEAT_API_SERVICE_PORT"),
+			},
+			&cli.StringFlag{
+				Name:     "id",
+				Usage:    "Feature ID to retrieve",
+				Required: true,
+			},
+		},
+		Action: client.GetFeatAnno,
 	}
 }
 

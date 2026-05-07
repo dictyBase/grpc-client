@@ -145,6 +145,38 @@ func FormatAnnotationRecord(a AnnotationResult) string {
 	)
 }
 
+// AnnoFeatResult represents a processed feature annotation from the API.
+type AnnoFeatResult struct {
+	ID         string
+	Name       string
+	CreatedBy  string
+	CreatedAt  string
+	Synonyms   []string
+	Properties map[string]string
+}
+
+// FormatAnnoFeatRecord formats a feature annotation result as a display string.
+func FormatAnnoFeatRecord(a AnnoFeatResult) string {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "Feature ID: %s\n", a.ID)
+	fmt.Fprintf(&sb, "Name: %s\n", a.Name)
+	fmt.Fprintf(&sb, "Created by: %s\n", a.CreatedBy)
+	fmt.Fprintf(&sb, "Created at: %s\n", a.CreatedAt)
+	if len(a.Synonyms) > 0 {
+		fmt.Fprintln(&sb, "Synonyms:")
+		for _, syn := range a.Synonyms {
+			fmt.Fprintf(&sb, "  - %s\n", syn)
+		}
+	}
+	if len(a.Properties) > 0 {
+		fmt.Fprintln(&sb, "Properties:")
+		for tag, value := range a.Properties {
+			fmt.Fprintf(&sb, "  %s: %s\n", tag, value)
+		}
+	}
+	return sb.String()
+}
+
 // FormatAnnotationGroupRecord formats an annotation group result as a display string.
 func FormatAnnotationGroupRecord(g AnnotationGroupResult) string {
 	var sb strings.Builder
