@@ -8,11 +8,13 @@ import (
 
 	A "github.com/IBM/fp-go/v2/array"
 	E "github.com/IBM/fp-go/v2/either"
+	Eq "github.com/IBM/fp-go/v2/eq"
 	fperrors "github.com/IBM/fp-go/v2/errors"
 	F "github.com/IBM/fp-go/v2/function"
 	IO "github.com/IBM/fp-go/v2/io"
 	IOE "github.com/IBM/fp-go/v2/ioeither"
 	O "github.com/IBM/fp-go/v2/option"
+	P "github.com/IBM/fp-go/v2/predicate"
 	R "github.com/IBM/fp-go/v2/record"
 	T "github.com/IBM/fp-go/v2/tuple"
 	feature "github.com/dictyBase/go-genproto/dictybaseapis/feature_annotation"
@@ -30,13 +32,18 @@ var (
 
 	splitOnEq = F.Bind23of3(strings.SplitN)("=", keyValueParts)
 
+	sliceLen         = func(kv []string) int { return len(kv) } // ← wraps built-in
+	hasKeyValueParts = F.Pipe2(
+		keyValueParts,
+		Eq.Equals(Eq.FromStrictEquals[int]()),
+		P.ContraMap(sliceLen),
+	)
+
 	parseProperty = F.Flow2(
 		F.Flow3(
 			strings.TrimSpace,
 			splitOnEq,
-			O.FromPredicate(func(kv []string) bool {
-				return len(kv) == keyValueParts
-			}),
+			O.FromPredicate(hasKeyValueParts),
 		),
 		O.Map(func(kv []string) T.Tuple2[string, string] {
 			return T.MakeTuple2(
