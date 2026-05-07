@@ -40,16 +40,18 @@ type annoFeatWithConnection struct {
 	Connection *grpc.ClientConn
 }
 
+const keyValueParts = 2
+
 var splitByComma = F.Bind2of2(strings.Split)(",")
 
-var splitOnEq = F.Bind23of3(strings.SplitN)("=", 2)
+var splitOnEq = F.Bind23of3(strings.SplitN)("=", keyValueParts)
 
 var parseProperty = F.Flow2(
 	F.Flow3(
 		strings.TrimSpace,
 		splitOnEq,
 		O.FromPredicate(func(kv []string) bool {
-			return len(kv) == 2
+			return len(kv) == keyValueParts
 		}),
 	),
 	O.Map(func(kv []string) T.Tuple2[string, string] {
