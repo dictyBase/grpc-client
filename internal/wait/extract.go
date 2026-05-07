@@ -8,16 +8,24 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// stuckReasons is the set of container waiting reasons that indicate a stuck pod.
-var stuckReasons = map[string]bool{
-	"ImagePullBackOff":           true,
-	"ErrImagePull":               true,
-	"InvalidImageName":           true,
-	"CrashLoopBackOff":           true,
-	"CreateContainerConfigError": true,
-	"CreateContainerError":       true,
-	"ContainerCannotRun":         true,
-}
+var (
+	// stuckReasons is the set of container waiting reasons that indicate a stuck pod.
+	stuckReasons = map[string]bool{
+		"ImagePullBackOff":           true,
+		"ErrImagePull":               true,
+		"InvalidImageName":           true,
+		"CrashLoopBackOff":           true,
+		"CreateContainerConfigError": true,
+		"CreateContainerError":       true,
+		"ContainerCannotRun":         true,
+	}
+
+	// conditionTypeMap maps Kubernetes JobConditionTypes to domain JobStates.
+	conditionTypeMap = map[batchv1.JobConditionType]JobState{
+		batchv1.JobComplete: JobComplete,
+		batchv1.JobFailed:   JobFailed,
+	}
+)
 
 // isStuckReason returns true if the waiting reason signals a stuck container.
 func isStuckReason(reason string) bool {
@@ -62,12 +70,6 @@ func ClassifyPodState(pods *corev1.PodList) JobState {
 			func(_ string) JobState { return JobStuck },
 		),
 	)
-}
-
-// conditionTypeMap maps Kubernetes JobConditionTypes to domain JobStates.
-var conditionTypeMap = map[batchv1.JobConditionType]JobState{
-	batchv1.JobComplete: JobComplete,
-	batchv1.JobFailed:   JobFailed,
 }
 
 // isTerminalCondition returns true for a Complete or Failed condition with Status=True.

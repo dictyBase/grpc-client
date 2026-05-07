@@ -19,10 +19,10 @@ const (
 	JobComplete JobState = "Complete"
 	JobFailed   JobState = "Failed"
 	JobStuck    JobState = "Stuck"
-)
 
-// PollInterval is the delay between polling cycles.
-const PollInterval = 5 * time.Second
+	// PollInterval is the delay between polling cycles.
+	PollInterval = 5 * time.Second
+)
 
 // Params holds CLI-supplied parameters for the wait-job command.
 type Params struct {

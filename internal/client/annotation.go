@@ -18,9 +18,10 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-const DefaultAnnotationLimit = 10
-
-const DefaultAnnotationGroupLimit = 100
+const (
+	DefaultAnnotationLimit      = 10
+	DefaultAnnotationGroupLimit = 100
+)
 
 // annotationCollection is a type alias for the tagged annotation collection tuple
 type annotationCollection = *annotationpb.TaggedAnnotationCollection

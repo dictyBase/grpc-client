@@ -23,23 +23,6 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// AnnoFeatConfig holds configuration for feature annotation service operations.
-type AnnoFeatConfig struct {
-	ServerAddr string
-	Port       string
-	ID         string
-	Name       string
-	Synonyms   []string
-	Properties map[string]string
-	CreatedBy  string
-}
-
-// annoFeatWithConnection enriches AnnoFeatConfig with a gRPC connection.
-type annoFeatWithConnection struct {
-	AnnoFeatConfig
-	Connection *grpc.ClientConn
-}
-
 const keyValueParts = 2
 
 var splitByComma = F.Bind2of2(strings.Split)(",")
@@ -61,6 +44,23 @@ var parseProperty = F.Flow2(
 		)
 	}),
 )
+
+// AnnoFeatConfig holds configuration for feature annotation service operations.
+type AnnoFeatConfig struct {
+	ServerAddr string
+	Port       string
+	ID         string
+	Name       string
+	Synonyms   []string
+	Properties map[string]string
+	CreatedBy  string
+}
+
+// annoFeatWithConnection enriches AnnoFeatConfig with a gRPC connection.
+type annoFeatWithConnection struct {
+	AnnoFeatConfig
+	Connection *grpc.ClientConn
+}
 
 // createAnnoFeatConnection creates a gRPC connection for the feature annotation API.
 func createAnnoFeatConnection(

@@ -12,6 +12,14 @@ import (
 	"google.golang.org/grpc"
 )
 
+const MaxSummaryWords = 30
+
+// StrainFilterAllowed holds the allowed strain type values for filtering.
+var (
+	StrainFilterAllowed = []string{"REMI-seq", "general strain", "bacterial strain", "all"}
+	trun30words         = F.Curry2(TruncateWords)(MaxSummaryWords)
+)
+
 // ListPlasmidsContext is the marker context for list plasmids operations
 // following the modware-import pattern from plasmid_ontology.go
 type ListPlasmidsContext struct{}
@@ -29,9 +37,6 @@ type ListPlasmidsConfig struct {
 	StrainID   string
 	StrainType string
 }
-
-// StrainFilterAllowed holds the allowed strain type values for filtering.
-var StrainFilterAllowed = []string{"REMI-seq", "general strain", "bacterial strain", "all"}
 
 // WithConnection enriches ListPlasmidsConfig with gRPC connection
 // Pattern from modware-import plasmid_ontology.go WithPlasmid (lines 127-130)
@@ -103,8 +108,6 @@ type AnnotationGroupCollectionIOE = IOE.IOEither[error, *annotation.TaggedAnnota
 // AnnotationGroupResultsIOE represents an IO operation that produces a slice of AnnotationGroupResult or an error
 type AnnotationGroupResultsIOE = IOE.IOEither[error, []AnnotationGroupResult]
 
-const MaxSummaryWords = 30
-
 // ToEither executes an IOEither effect and returns the resulting Either.
 func ToEither[ERR, A any](ioe IOE.IOEither[ERR, A]) E.Either[ERR, A] {
 	return ioe()
@@ -118,8 +121,6 @@ func TruncateWords(maxWords int, s string) string {
 	}
 	return s
 }
-
-var trun30words = F.Curry2(TruncateWords)(MaxSummaryWords)
 
 // FormatPlasmidRecord formats a single plasmid result as a display string.
 func FormatPlasmidRecord(p PlasmidResult) string {
