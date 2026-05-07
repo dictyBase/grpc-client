@@ -40,12 +40,10 @@ var (
 		P.ContraMap(sliceLen),
 	)
 
-	parseProperty = F.Flow2(
-		F.Flow3(
-			strings.TrimSpace,
-			splitOnEq,
-			O.FromPredicate(hasKeyValueParts),
-		),
+	parseProperty = F.Flow4(
+		strings.TrimSpace,
+		splitOnEq,
+		O.FromPredicate(hasKeyValueParts),
 		O.Map(func(kv []string) PR.Pair[string, string] {
 			return PR.MakePair(
 				strings.TrimSpace(kv[0]),
