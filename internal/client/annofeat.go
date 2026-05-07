@@ -40,7 +40,7 @@ var (
 		P.ContraMap(sliceLen),
 	)
 
-	parseProperty = F.Flow4(
+	parsePropertyPair = F.Flow4(
 		strings.TrimSpace,
 		splitOnEq,
 		O.FromPredicate(hasKeyValueParts),
@@ -263,7 +263,7 @@ func parseProperties(raw string) R.Record[string, string] {
 	return F.Pipe3(
 		raw,
 		splitByComma,
-		A.FilterMap(parseProperty),
+		A.FilterMap(parsePropertyPair),
 		R.FromEntries[string, string],
 	)
 }
