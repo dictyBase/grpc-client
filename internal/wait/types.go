@@ -49,21 +49,23 @@ type PollContext struct {
 }
 
 // SetClient is a curried setter used with IOE.Bind to inject the K8s client.
-var SetClient = F.Curry2(func(c kubernetes.Interface, p Params) WithClient {
-	return WithClient{Params: p, Client: c}
-})
-
 // SetPollReady is a curried setter used with IOE.Let to attach the logger and
 // deadline.
-var SetPollReady = F.Curry2(func(deadline time.Time, c WithClient) PollContext {
-	return PollContext{
-		WithClient: c,
-		Logger:     slog.New(slog.NewJSONHandler(os.Stdout, nil)),
-		Deadline:   deadline,
-		State:      JobPending,
-		Condition:  O.None[JobState](),
-	}
-})
+var (
+	SetClient = F.Curry2(func(c kubernetes.Interface, p Params) WithClient {
+		return WithClient{Params: p, Client: c}
+	})
+
+	SetPollReady = F.Curry2(func(deadline time.Time, c WithClient) PollContext {
+		return PollContext{
+			WithClient: c,
+			Logger:     slog.New(slog.NewJSONHandler(os.Stdout, nil)),
+			Deadline:   deadline,
+			State:      JobPending,
+			Condition:  O.None[JobState](),
+		}
+	})
+)
 
 // computeDeadline derives the polling deadline from Params.Timeout.
 // Pure function — safe for use with IOE.Let.

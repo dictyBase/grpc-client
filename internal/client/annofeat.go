@@ -25,24 +25,26 @@ import (
 
 const keyValueParts = 2
 
-var splitByComma = F.Bind2of2(strings.Split)(",")
+var (
+	splitByComma = F.Bind2of2(strings.Split)(",")
 
-var splitOnEq = F.Bind23of3(strings.SplitN)("=", keyValueParts)
+	splitOnEq = F.Bind23of3(strings.SplitN)("=", keyValueParts)
 
-var parseProperty = F.Flow2(
-	F.Flow3(
-		strings.TrimSpace,
-		splitOnEq,
-		O.FromPredicate(func(kv []string) bool {
-			return len(kv) == keyValueParts
+	parseProperty = F.Flow2(
+		F.Flow3(
+			strings.TrimSpace,
+			splitOnEq,
+			O.FromPredicate(func(kv []string) bool {
+				return len(kv) == keyValueParts
+			}),
+		),
+		O.Map(func(kv []string) T.Tuple2[string, string] {
+			return T.MakeTuple2(
+				strings.TrimSpace(kv[0]),
+				strings.TrimSpace(kv[1]),
+			)
 		}),
-	),
-	O.Map(func(kv []string) T.Tuple2[string, string] {
-		return T.MakeTuple2(
-			strings.TrimSpace(kv[0]),
-			strings.TrimSpace(kv[1]),
-		)
-	}),
+	)
 )
 
 // AnnoFeatConfig holds configuration for feature annotation service operations.
