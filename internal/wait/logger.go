@@ -12,6 +12,7 @@ func logState(ctx PollContext) IO.IO[struct{}] {
 			"job", ctx.Name,
 			"state", string(ctx.State),
 		)
+
 		return struct{}{}
 	}
 }

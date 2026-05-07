@@ -81,6 +81,7 @@ func callListAnnotations(
 	return F.Pipe1(
 		IOE.TryCatchError(func() (*annotationpb.TaggedAnnotationCollection, error) {
 			defer ctx.Connection.Close()
+
 			return annotationpb.NewTaggedAnnotationServiceClient(ctx.Connection).
 				ListAnnotations(context.Background(),
 					&annotationpb.ListParameters{
@@ -100,16 +101,16 @@ func ToAnnotationResults(
 	collection *annotationpb.TaggedAnnotationCollection,
 ) []domain.AnnotationResult {
 	return F.Pipe1(
-		collection.Data,
+		collection.GetData(),
 		A.Map(func(d *annotationpb.TaggedAnnotationCollection_Data) domain.AnnotationResult {
 			return domain.AnnotationResult{
-				ID:        d.Id,
-				EntryID:   d.Attributes.GetEntryId(),
-				Tag:       d.Attributes.GetTag(),
-				Ontology:  d.Attributes.GetOntology(),
-				Value:     d.Attributes.GetValue(),
-				CreatedBy: d.Attributes.GetCreatedBy(),
-				Version:   d.Attributes.GetVersion(),
+				ID:        d.GetId(),
+				EntryID:   d.GetAttributes().GetEntryId(),
+				Tag:       d.GetAttributes().GetTag(),
+				Ontology:  d.GetAttributes().GetOntology(),
+				Value:     d.GetAttributes().GetValue(),
+				CreatedBy: d.GetAttributes().GetCreatedBy(),
+				Version:   d.GetAttributes().GetVersion(),
 			}
 		}),
 	)
@@ -121,9 +122,11 @@ func printAnnotationResults(
 	nextCursor int64,
 ) {
 	fmt.Printf("total annotations fetched %d\n", len(results))
+
 	for _, a := range results {
 		fmt.Println(domain.FormatAnnotationRecord(a))
 	}
+
 	fmt.Printf("next-cursor:%d\n", nextCursor)
 }
 
@@ -134,6 +137,7 @@ func callListAnnotationGroups(
 	return F.Pipe1(
 		IOE.TryCatchError(func() (*annotationpb.TaggedAnnotationGroupCollection, error) {
 			defer ctx.Connection.Close()
+
 			return annotationpb.NewTaggedAnnotationServiceClient(ctx.Connection).
 				ListAnnotationGroups(context.Background(),
 					&annotationpb.ListGroupParameters{
@@ -153,24 +157,24 @@ func ToAnnotationGroupResults(
 	collection *annotationpb.TaggedAnnotationGroupCollection,
 ) []domain.AnnotationGroupResult {
 	return F.Pipe1(
-		collection.Data,
+		collection.GetData(),
 		A.Map(
 			func(d *annotationpb.TaggedAnnotationGroupCollection_Data) domain.AnnotationGroupResult {
 				return domain.AnnotationGroupResult{
-					GroupID: d.Group.GetGroupId(),
+					GroupID: d.GetGroup().GetGroupId(),
 					Annotations: F.Pipe1(
-						d.Group.Data,
+						d.GetGroup().GetData(),
 						A.Map(func(
 							a *annotationpb.TaggedAnnotationGroup_Data,
 						) domain.AnnotationResult {
 							return domain.AnnotationResult{
-								ID:        a.Id,
-								EntryID:   a.Attributes.GetEntryId(),
-								Tag:       a.Attributes.GetTag(),
-								Ontology:  a.Attributes.GetOntology(),
-								Value:     a.Attributes.GetValue(),
-								CreatedBy: a.Attributes.GetCreatedBy(),
-								Version:   a.Attributes.GetVersion(),
+								ID:        a.GetId(),
+								EntryID:   a.GetAttributes().GetEntryId(),
+								Tag:       a.GetAttributes().GetTag(),
+								Ontology:  a.GetAttributes().GetOntology(),
+								Value:     a.GetAttributes().GetValue(),
+								CreatedBy: a.GetAttributes().GetCreatedBy(),
+								Version:   a.GetAttributes().GetVersion(),
 							}
 						}),
 					),
@@ -186,21 +190,26 @@ func printAnnotationGroupResults(
 	nextCursor int64,
 ) {
 	fmt.Printf("total groups %d\n", len(results))
+
 	for _, g := range results {
 		fmt.Print(domain.FormatAnnotationGroupRecord(g))
 	}
+
 	fmt.Printf("next-cursor:%d\n", nextCursor)
 }
 
 // buildAnnotationGroupFilter constructs the filter string for ListAnnotationGroups.
 func buildAnnotationGroupFilter(identifier, tag, ontology string) string {
 	filter := fmt.Sprintf("entry_id===%s", identifier)
+
 	if tag != "" {
 		filter += fmt.Sprintf(";tag===%s", tag)
 	}
+
 	if ontology != "" {
 		filter += fmt.Sprintf(";ontology===%s", ontology)
 	}
+
 	return filter
 }
 
@@ -241,9 +250,11 @@ func FindAnnotation(_ context.Context, cmd *cli.Command) error {
 
 	results := ToAnnotationResults(result.F2)
 	nextCursor := int64(0)
-	if result.F2.Meta != nil {
-		nextCursor = result.F2.Meta.NextCursor
+
+	if result.F2.GetMeta() != nil {
+		nextCursor = result.F2.GetMeta().GetNextCursor()
 	}
+
 	printAnnotationResults(results, nextCursor)
 
 	return nil
@@ -293,9 +304,11 @@ func FindByTag(_ context.Context, cmd *cli.Command) error {
 
 	results := ToAnnotationResults(result.F2)
 	nextCursor := int64(0)
-	if result.F2.Meta != nil {
-		nextCursor = result.F2.Meta.NextCursor
+
+	if result.F2.GetMeta() != nil {
+		nextCursor = result.F2.GetMeta().GetNextCursor()
 	}
+
 	printAnnotationResults(results, nextCursor)
 
 	return nil
@@ -342,9 +355,11 @@ func FindAnnotationGroup(_ context.Context, cmd *cli.Command) error {
 
 	results := ToAnnotationGroupResults(result.F2)
 	nextCursor := int64(0)
-	if result.F2.Meta != nil {
-		nextCursor = result.F2.Meta.NextCursor
+
+	if result.F2.GetMeta() != nil {
+		nextCursor = result.F2.GetMeta().GetNextCursor()
 	}
+
 	printAnnotationGroupResults(results, nextCursor)
 
 	return nil
@@ -357,7 +372,9 @@ func callRemoveAnnotation(
 	return F.Pipe1(
 		IOE.TryCatchError(func() (*annotationpb.TaggedAnnotation, error) {
 			defer ctx.Connection.Close()
+
 			client := annotationpb.NewTaggedAnnotationServiceClient(ctx.Connection)
+
 			ta, err := client.GetEntryAnnotation(context.Background(),
 				&annotationpb.EntryAnnotationRequest{
 					Tag:      ctx.Tag,
@@ -367,14 +384,16 @@ func callRemoveAnnotation(
 			if err != nil {
 				return nil, fperrors.OnError("failed to get entry annotation")(err)
 			}
+
 			_, err = client.DeleteAnnotation(context.Background(),
 				&annotationpb.DeleteAnnotationRequest{
-					Id:    ta.Data.Id,
+					Id:    ta.GetData().GetId(),
 					Purge: true,
 				})
 			if err != nil {
 				return nil, fperrors.OnError("failed to delete annotation")(err)
 			}
+
 			return ta, nil
 		}),
 		IOE.MapLeft[*annotationpb.TaggedAnnotation](
@@ -387,11 +406,11 @@ func callRemoveAnnotation(
 func printRemovedAnnotation(ta *annotationpb.TaggedAnnotation) {
 	fmt.Printf(
 		"deleted tag=> %s ontology=> %s entry=> %s value=> %s rank=> %d\n",
-		ta.Data.Attributes.GetTag(),
-		ta.Data.Attributes.GetOntology(),
-		ta.Data.Attributes.GetEntryId(),
-		ta.Data.Attributes.GetValue(),
-		ta.Data.Attributes.GetRank(),
+		ta.GetData().GetAttributes().GetTag(),
+		ta.GetData().GetAttributes().GetOntology(),
+		ta.GetData().GetAttributes().GetEntryId(),
+		ta.GetData().GetAttributes().GetValue(),
+		ta.GetData().GetAttributes().GetRank(),
 	)
 }
 

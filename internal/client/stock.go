@@ -169,10 +169,10 @@ func FetchPlasmid(_ context.Context, cmd *cli.Command) error {
 		IOE.Map[error](func(pdata *stockpb.Plasmid) string {
 			return fmt.Sprintf(
 				"%s %s %s %s",
-				pdata.Data.Id,
-				pdata.Data.Attributes.Name,
-				pdata.Data.Attributes.CreatedBy,
-				pdata.Data.Attributes.Summary,
+				pdata.GetData().GetId(),
+				pdata.GetData().GetAttributes().GetName(),
+				pdata.GetData().GetAttributes().GetCreatedBy(),
+				pdata.GetData().GetAttributes().GetSummary(),
 			)
 		}),
 		domain.ToEither,
@@ -216,12 +216,12 @@ func FetchStrain(_ context.Context, cmd *cli.Command) error {
 		IOE.Map[error](func(s *stockpb.Strain) string {
 			return fmt.Sprintf(
 				"%s %s %s %s %s %s",
-				s.Data.Id,
-				s.Data.Attributes.Label,
-				s.Data.Attributes.CreatedBy,
-				s.Data.Attributes.Publications,
-				s.Data.Attributes.Species,
-				s.Data.Attributes.Genes,
+				s.GetData().GetId(),
+				s.GetData().GetAttributes().GetLabel(),
+				s.GetData().GetAttributes().GetCreatedBy(),
+				s.GetData().GetAttributes().GetPublications(),
+				s.GetData().GetAttributes().GetSpecies(),
+				s.GetData().GetAttributes().GetGenes(),
 			)
 		}),
 		domain.ToEither,
@@ -282,15 +282,17 @@ func FilterStrain(_ context.Context, cmd *cli.Command) error {
 		return result.F1
 	}
 
-	if len(result.F2.Data) == 0 {
+	if len(result.F2.GetData()) == 0 {
 		return fmt.Errorf("no strain found with filter %s", buildStrainFilter(stype))
 	}
 
 	results := ToStrainResults(result.F2)
 	nextCursor := int64(0)
-	if result.F2.Meta != nil {
-		nextCursor = result.F2.Meta.NextCursor
+
+	if result.F2.GetMeta() != nil {
+		nextCursor = result.F2.GetMeta().GetNextCursor()
 	}
+
 	printStrainResults(results, nextCursor)
 
 	return nil

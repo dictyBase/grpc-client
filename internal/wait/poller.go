@@ -33,6 +33,7 @@ func resolveState(ctx PollContext) IOE.IOEither[error, PollContext] {
 		ctx.State = state
 		return ctx
 	}
+
 	return F.Pipe1(
 		ctx.Condition,
 		O.Fold(

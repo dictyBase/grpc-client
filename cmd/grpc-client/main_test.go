@@ -13,6 +13,7 @@ func TestLookupSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 	t.Setenv("STOCK_API_SERVICE_PORT", "9345")
 
 	var gotHost, gotPort string
+
 	app := &cli.Command{
 		Name: "search",
 		Commands: []*cli.Command{
@@ -38,6 +39,7 @@ func TestLookupSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 						Action: func(_ context.Context, cmd *cli.Command) error {
 							gotHost = cmd.String("host")
 							gotPort = cmd.String("port")
+
 							return nil
 						},
 					},
@@ -57,6 +59,7 @@ func TestListSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 	t.Setenv("STOCK_API_SERVICE_PORT", "9345")
 
 	var gotHost, gotPort string
+
 	app := &cli.Command{
 		Name: "search",
 		Commands: []*cli.Command{
@@ -82,6 +85,7 @@ func TestListSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 						Action: func(_ context.Context, cmd *cli.Command) error {
 							gotHost = cmd.String("host")
 							gotPort = cmd.String("port")
+
 							return nil
 						},
 					},
@@ -101,6 +105,7 @@ func TestFetchSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 	t.Setenv("STOCK_API_SERVICE_PORT", "9345")
 
 	var gotHost, gotPort, gotID string
+
 	app := &cli.Command{
 		Name: "goldenbraid-list",
 		Commands: []*cli.Command{
@@ -128,6 +133,7 @@ func TestFetchSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 							gotHost = cmd.String("host")
 							gotPort = cmd.String("port")
 							gotID = cmd.String("identifier")
+
 							return nil
 						},
 					},
@@ -151,6 +157,7 @@ func TestStrainFetchSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 	t.Setenv("STOCK_API_SERVICE_PORT", "9345")
 
 	var gotHost, gotPort, gotID string
+
 	app := &cli.Command{
 		Name: "grpc-client",
 		Commands: []*cli.Command{
@@ -177,7 +184,9 @@ func TestStrainFetchSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 						Action: func(_ context.Context, cmd *cli.Command) error {
 							gotHost = cmd.String("host")
 							gotPort = cmd.String("port")
+
 							gotID = cmd.String("identifier")
+
 							return nil
 						},
 					},
@@ -201,7 +210,9 @@ func TestStrainFilterSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 	t.Setenv("STOCK_API_SERVICE_PORT", "9345")
 
 	var gotHost, gotPort, gotType string
+
 	var gotLimit, gotCursor int64
+
 	app := &cli.Command{
 		Name: "grpc-client",
 		Commands: []*cli.Command{
@@ -238,8 +249,10 @@ func TestStrainFilterSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 							gotHost = cmd.String("host")
 							gotPort = cmd.String("port")
 							gotType = cmd.String("strain-type")
+
 							gotLimit = int64(cmd.Int("limit"))
 							gotCursor = int64(cmd.Int("cursor"))
+
 							return nil
 						},
 					},
@@ -274,8 +287,11 @@ func TestAnnotationFindByTagSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 	t.Setenv("ANNOTATION_API_SERVICE_HOST", "annotation-api.dev.svc")
 	t.Setenv("ANNOTATION_API_SERVICE_PORT", "9345")
 
-	var gotHost, gotPort, gotOntology, gotTag string
-	var gotLimit, gotCursor int64
+	var (
+		gotHost, gotPort, gotOntology, gotTag string
+		gotLimit, gotCursor                   int64
+	)
+
 	app := &cli.Command{
 		Name: "grpc-client",
 		Commands: []*cli.Command{
@@ -318,6 +334,7 @@ func TestAnnotationFindByTagSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 							gotTag = cmd.String("tag")
 							gotLimit = int64(cmd.Int("limit"))
 							gotCursor = int64(cmd.Int("cursor"))
+
 							return nil
 						},
 					},
@@ -356,7 +373,9 @@ func TestAnnotationFindSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 	t.Setenv("ANNOTATION_API_SERVICE_PORT", "9345")
 
 	var gotHost, gotPort, gotFilter string
+
 	var gotLimit, gotCursor int64
+
 	app := &cli.Command{
 		Name: "grpc-client",
 		Commands: []*cli.Command{
@@ -394,6 +413,7 @@ func TestAnnotationFindSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 							gotFilter = cmd.String("filter")
 							gotLimit = int64(cmd.Int("limit"))
 							gotCursor = int64(cmd.Int("cursor"))
+
 							return nil
 						},
 					},
@@ -428,8 +448,11 @@ func TestAnnotationGroupFindSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 	t.Setenv("ANNOTATION_API_SERVICE_HOST", "annotation-api.dev.svc")
 	t.Setenv("ANNOTATION_API_SERVICE_PORT", "9345")
 
-	var gotHost, gotPort, gotIdentifier, gotTag, gotOntology string
-	var gotLimit, gotCursor int64
+	var (
+		gotHost, gotPort, gotIdentifier, gotTag, gotOntology string
+		gotLimit, gotCursor                                  int64
+	)
+
 	app := &cli.Command{
 		Name: "grpc-client",
 		Commands: []*cli.Command{
@@ -477,7 +500,9 @@ func TestAnnotationGroupFindSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 							gotTag = cmd.String("tag")
 							gotOntology = cmd.String("ontology")
 							gotLimit = int64(cmd.Int("limit"))
+
 							gotCursor = int64(cmd.Int("cursor"))
+
 							return nil
 						},
 					},
@@ -512,6 +537,7 @@ func TestAnnotationRemoveSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 	t.Setenv("ANNOTATION_API_SERVICE_PORT", "9345")
 
 	var gotHost, gotPort, gotTag, gotIdentifier, gotOntology string
+
 	app := &cli.Command{
 		Name: "grpc-client",
 		Commands: []*cli.Command{
@@ -549,6 +575,7 @@ func TestAnnotationRemoveSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 							gotTag = cmd.String("tag")
 							gotIdentifier = cmd.String("identifier")
 							gotOntology = cmd.String("ontology")
+
 							return nil
 						},
 					},
@@ -577,6 +604,7 @@ func TestAnnoFeatCreateSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 	t.Setenv("ANNO_FEAT_API_SERVICE_PORT", "9345")
 
 	var gotHost, gotPort, gotID, gotName, gotCreatedBy, gotSynonyms, gotProperties string
+
 	app := &cli.Command{
 		Name: "grpc-client",
 		Commands: []*cli.Command{
@@ -621,6 +649,7 @@ func TestAnnoFeatCreateSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 							gotCreatedBy = cmd.String("created-by")
 							gotSynonyms = cmd.String("synonyms")
 							gotProperties = cmd.String("properties")
+
 							return nil
 						},
 					},
@@ -644,7 +673,7 @@ func TestAnnoFeatCreateSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 	require.Equal(t, "9345", gotPort)
 	require.Equal(t, "DDB_G0285425", gotID)
 	require.Equal(t, "Test Feature", gotName)
-	require.Equal(t, "", gotCreatedBy)
+	require.Empty(t, gotCreatedBy)
 	require.Equal(t, "test1,test2", gotSynonyms)
 	require.Equal(t, "description=Test description,note=Test note", gotProperties)
 }
@@ -654,6 +683,7 @@ func TestAnnoFeatGetSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 	t.Setenv("ANNO_FEAT_API_SERVICE_PORT", "9345")
 
 	var gotHost, gotPort, gotID string
+
 	app := &cli.Command{
 		Name: "grpc-client",
 		Commands: []*cli.Command{
@@ -678,8 +708,10 @@ func TestAnnoFeatGetSubcommandPicksUpGRPCEnvVars(t *testing.T) {
 						},
 						Action: func(_ context.Context, cmd *cli.Command) error {
 							gotHost = cmd.String("host")
+
 							gotPort = cmd.String("port")
 							gotID = cmd.String("id")
+
 							return nil
 						},
 					},

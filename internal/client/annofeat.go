@@ -96,6 +96,7 @@ func callCreateFeatureAnnotation(
 	return F.Pipe1(
 		IOE.TryCatchError(func() (*feature.FeatureAnnotation, error) {
 			defer ctx.Connection.Close()
+
 			return feature.NewFeatureAnnotationServiceClient(ctx.Connection).
 				CreateFeatureAnnotation(context.Background(),
 					buildNewFeatureAnnotation(ctx.AnnoFeatConfig),
@@ -114,6 +115,7 @@ func callGetFeatureAnnotation(
 	return F.Pipe1(
 		IOE.TryCatchError(func() (*feature.FeatureAnnotation, error) {
 			defer ctx.Connection.Close()
+
 			return feature.NewFeatureAnnotationServiceClient(ctx.Connection).
 				GetFeatureAnnotation(context.Background(),
 					&feature.FeatureAnnotationId{Id: ctx.ID},
@@ -143,21 +145,23 @@ func buildNewFeatureAnnotation(cfg AnnoFeatConfig) *feature.NewFeatureAnnotation
 			CreatedBy: cfg.CreatedBy,
 		})
 	}
+
 	return fa
 }
 
 // toAnnoFeatResult converts a FeatureAnnotation proto to a domain result.
 func toAnnoFeatResult(fa *feature.FeatureAnnotation) domain.AnnoFeatResult {
 	result := domain.AnnoFeatResult{
-		ID:        fa.Id,
-		Name:      fa.Attributes.GetName(),
-		CreatedBy: fa.CreatedBy,
-		CreatedAt: fa.CreatedAt.AsTime().Format(time.RFC3339),
-		Synonyms:  fa.Attributes.Synonyms,
+		ID:        fa.GetId(),
+		Name:      fa.GetAttributes().GetName(),
+		CreatedBy: fa.GetCreatedBy(),
+		CreatedAt: fa.GetCreatedAt().AsTime().Format(time.RFC3339),
+		Synonyms:  fa.GetAttributes().GetSynonyms(),
 	}
-	for _, prop := range fa.Attributes.Properties {
-		result.Properties[prop.Tag] = prop.Value
+	for _, prop := range fa.GetAttributes().GetProperties() {
+		result.Properties[prop.GetTag()] = prop.GetValue()
 	}
+
 	return result
 }
 

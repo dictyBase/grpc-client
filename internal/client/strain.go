@@ -45,6 +45,7 @@ func callGetStrain(
 	return F.Pipe1(
 		IOE.TryCatchError(func() (*stockpb.Strain, error) {
 			defer ctx.Connection.Close()
+
 			return stockpb.NewStockServiceClient(ctx.Connection).
 				GetStrain(context.Background(),
 					&stockpb.StockId{Id: ctx.StrainID})
@@ -66,6 +67,7 @@ func buildStrainFilter(stype string) string {
 			domain.StrainFilterAllowed[2],
 		)
 	}
+
 	return fmt.Sprintf("%s;tag==%s", filter, stype)
 }
 
@@ -76,6 +78,7 @@ func callListStrains(
 	return F.Pipe1(
 		IOE.TryCatchError(func() (*stockpb.StrainCollection, error) {
 			defer ctx.Connection.Close()
+
 			return stockpb.NewStockServiceClient(ctx.Connection).
 				ListStrains(context.Background(),
 					&stockpb.StockParameters{
@@ -93,14 +96,14 @@ func callListStrains(
 // ToStrainResults converts protobuf collection to domain results
 func ToStrainResults(collection *stockpb.StrainCollection) []domain.StrainResult {
 	return F.Pipe1(
-		collection.Data,
+		collection.GetData(),
 		A.Map(func(s *stockpb.StrainCollection_Data) domain.StrainResult {
 			return domain.StrainResult{
-				ID:                  s.Id,
-				Label:               s.Attributes.GetLabel(),
-				CreatedBy:           s.Attributes.GetCreatedBy(),
-				Species:             s.Attributes.GetSpecies(),
-				DictyStrainProperty: s.Attributes.GetDictyStrainProperty(),
+				ID:                  s.GetId(),
+				Label:               s.GetAttributes().GetLabel(),
+				CreatedBy:           s.GetAttributes().GetCreatedBy(),
+				Species:             s.GetAttributes().GetSpecies(),
+				DictyStrainProperty: s.GetAttributes().GetDictyStrainProperty(),
 			}
 		}),
 	)
@@ -109,6 +112,7 @@ func ToStrainResults(collection *stockpb.StrainCollection) []domain.StrainResult
 // printStrainResults prints the strain results to stdout.
 func printStrainResults(results []domain.StrainResult, nextCursor int64) {
 	fmt.Printf("total strain fetched %d\n", len(results))
+
 	for _, s := range results {
 		fmt.Printf(
 			"%s %s %s %s %s\n",
@@ -119,6 +123,7 @@ func printStrainResults(results []domain.StrainResult, nextCursor int64) {
 			s.DictyStrainProperty,
 		)
 	}
+
 	fmt.Printf("next-cursor:%d\n", nextCursor)
 }
 

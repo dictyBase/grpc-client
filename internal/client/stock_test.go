@@ -94,8 +94,7 @@ func BenchmarkToPlasmidResults(b *testing.B) {
 		}
 	}
 
-	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		_ = ToPlasmidResults(collection)
 	}
 }
@@ -234,6 +233,7 @@ func toAnnotationResultsTests() []struct {
 } {
 	basic := toAnnotationResultsBasicTests()
 	multi := toAnnotationResultsMultiTests()
+
 	return append(basic, multi...)
 }
 

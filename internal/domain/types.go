@@ -119,6 +119,7 @@ func TruncateWords(maxWords int, s string) string {
 	if len(words) > maxWords {
 		return strings.Join(words[:maxWords], " ") + "..."
 	}
+
 	return s
 }
 
@@ -163,18 +164,23 @@ func FormatAnnoFeatRecord(a AnnoFeatResult) string {
 	fmt.Fprintf(&sb, "Name: %s\n", a.Name)
 	fmt.Fprintf(&sb, "Created by: %s\n", a.CreatedBy)
 	fmt.Fprintf(&sb, "Created at: %s\n", a.CreatedAt)
+
 	if len(a.Synonyms) > 0 {
 		fmt.Fprintln(&sb, "Synonyms:")
+
 		for _, syn := range a.Synonyms {
 			fmt.Fprintf(&sb, "  - %s\n", syn)
 		}
 	}
+
 	if len(a.Properties) > 0 {
 		fmt.Fprintln(&sb, "Properties:")
+
 		for tag, value := range a.Properties {
 			fmt.Fprintf(&sb, "  %s: %s\n", tag, value)
 		}
 	}
+
 	return sb.String()
 }
 
@@ -182,6 +188,7 @@ func FormatAnnoFeatRecord(a AnnoFeatResult) string {
 func FormatAnnotationGroupRecord(g AnnotationGroupResult) string {
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "group-id %s\n=====\n", g.GroupID)
+
 	for _, a := range g.Annotations {
 		fmt.Fprintf(
 			&sb,
@@ -193,6 +200,8 @@ func FormatAnnotationGroupRecord(g AnnotationGroupResult) string {
 			trun30words(a.Value),
 		)
 	}
+
 	fmt.Fprintln(&sb)
+
 	return sb.String()
 }

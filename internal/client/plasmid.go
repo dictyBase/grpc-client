@@ -20,6 +20,7 @@ func callListPlasmids(
 	return F.Pipe1(
 		IOE.TryCatchError(func() (*stockpb.PlasmidCollection, error) {
 			defer ctx.Connection.Close()
+
 			return stockpb.NewStockServiceClient(ctx.Connection).
 				ListPlasmids(context.Background(),
 					&stockpb.StockParameters{
@@ -65,6 +66,7 @@ func callGetPlasmid(
 	return F.Pipe1(
 		IOE.TryCatchError(func() (*stockpb.Plasmid, error) {
 			defer ctx.Connection.Close()
+
 			return stockpb.NewStockServiceClient(ctx.Connection).
 				GetPlasmid(context.Background(),
 					&stockpb.StockId{Id: ctx.PlasmidID})
@@ -80,12 +82,12 @@ func ToPlasmidResults(
 	collection *stockpb.PlasmidCollection,
 ) []domain.PlasmidResult {
 	return F.Pipe1(
-		collection.Data,
+		collection.GetData(),
 		A.Map(func(pdata *stockpb.PlasmidCollection_Data) domain.PlasmidResult {
 			return domain.PlasmidResult{
-				ID:      pdata.Id,
-				Name:    pdata.Attributes.GetName(),
-				Summary: pdata.Attributes.GetSummary(),
+				ID:      pdata.GetId(),
+				Name:    pdata.GetAttributes().GetName(),
+				Summary: pdata.GetAttributes().GetSummary(),
 			}
 		}),
 	)
@@ -95,6 +97,7 @@ func ToPlasmidResults(
 func printPlasmidResults(results []domain.PlasmidResult) {
 	lines := F.Pipe1(results, A.Map(domain.FormatPlasmidRecord))
 	fmt.Printf(">>> total %d records <<<\n", len(results))
+
 	for _, line := range lines {
 		fmt.Println(line)
 	}
@@ -106,9 +109,12 @@ func callListPlasmidsLoop(
 ) IOE.IOEither[error, []domain.PlasmidResult] {
 	return IOE.TryCatchError(func() ([]domain.PlasmidResult, error) {
 		defer ctx.Connection.Close()
+
 		var allResults []domain.PlasmidResult
+
 		cursor := int64(0)
 		client := stockpb.NewStockServiceClient(ctx.Connection)
+
 		for {
 			coll, err := client.ListPlasmids(
 				context.Background(),
@@ -125,10 +131,11 @@ func callListPlasmidsLoop(
 			}
 
 			allResults = append(allResults, ToPlasmidResults(coll)...)
-			if coll.Meta == nil || coll.Meta.NextCursor == 0 {
+			if coll.GetMeta() == nil || coll.GetMeta().GetNextCursor() == 0 {
 				break
 			}
-			cursor = coll.Meta.NextCursor
+
+			cursor = coll.GetMeta().GetNextCursor()
 		}
 
 		return allResults, nil
@@ -139,9 +146,11 @@ func callListPlasmidsLoop(
 func printTop10PlasmidResults(results []domain.PlasmidResult) {
 	fmt.Printf(">>> total %d records retrieved <<<\n", len(results))
 	top := results
+
 	if len(top) > TopRecordsLimit {
 		top = top[:TopRecordsLimit]
 	}
+
 	lines := F.Pipe1(top, A.Map(domain.FormatPlasmidRecord))
 	for _, line := range lines {
 		fmt.Println(line)
