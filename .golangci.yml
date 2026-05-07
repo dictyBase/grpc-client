@@ -46,7 +46,7 @@ linters:
     - wsl_v5
   settings:
     funlen:
-      lines: 80
+      lines: 120
       statements: 50
   exclusions:
     generated: lax
