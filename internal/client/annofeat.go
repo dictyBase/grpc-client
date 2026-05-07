@@ -137,24 +137,26 @@ func callGetFeatureAnnotation(
 
 // buildNewFeatureAnnotation constructs a NewFeatureAnnotation from config.
 func buildNewFeatureAnnotation(cfg AnnoFeatConfig) *feature.NewFeatureAnnotation {
-	fa := &feature.NewFeatureAnnotation{
+	return &feature.NewFeatureAnnotation{
 		Id:        cfg.ID,
 		CreatedBy: cfg.CreatedBy,
 		CreatedAt: timestamppb.Now(),
 		Attributes: &feature.FeatureAnnotationAttributes{
 			Name:     cfg.Name,
 			Synonyms: cfg.Synonyms,
+			Properties: F.Pipe2(
+				cfg.Properties,
+				R.ToEntries[string, string],
+				A.Map(func(ent R.Entry[string, string]) *feature.TagProperty {
+					return &feature.TagProperty{
+						Tag:       PR.Head(ent),
+						Value:     PR.Tail(ent),
+						CreatedBy: cfg.CreatedBy,
+					}
+				}),
+			),
 		},
 	}
-	for tag, value := range cfg.Properties {
-		fa.Attributes.Properties = append(fa.Attributes.Properties, &feature.TagProperty{
-			Tag:       tag,
-			Value:     value,
-			CreatedBy: cfg.CreatedBy,
-		})
-	}
-
-	return fa
 }
 
 // toAnnoFeatResult converts a FeatureAnnotation proto to a domain result.
