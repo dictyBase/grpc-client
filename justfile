@@ -296,6 +296,62 @@ job-logs name k8s_config="" k8s_namespace="dev" env="dev":
     kubeconfig=$(just resolve-kubeconfig "{{env}}" "{{k8s_config}}")
     kubectl logs job/{{name}} --kubeconfig "$kubeconfig" -n {{k8s_namespace}}
 
+# Filter strains by type in Kubernetes
+run-strain-filter tag strain_type="all" limit="20" cursor="0" k8s_config="" k8s_namespace="dev" env="dev":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    kubeconfig=$(just resolve-kubeconfig "{{env}}" "{{k8s_config}}")
+    kubectl create -f - --kubeconfig "$kubeconfig" -o jsonpath='{.metadata.name}' <<EOF
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      generateName: grpc-client-strain-filter-
+      namespace: {{k8s_namespace}}
+    spec:
+      ttlSecondsAfterFinished: 200
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: grpc-client
+              image: {{ghcr_image}}:{{tag}}
+              args:
+                - strain
+                - filter
+                - --strain-type
+                - "{{strain_type}}"
+                - --limit
+                - "{{limit}}"
+                - --cursor
+                - "{{cursor}}"
+    EOF
+
+# Fetch a single strain by identifier in Kubernetes
+run-strain-fetch tag identifier k8s_config="" k8s_namespace="dev" env="dev":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    kubeconfig=$(just resolve-kubeconfig "{{env}}" "{{k8s_config}}")
+    kubectl create -f - --kubeconfig "$kubeconfig" -o jsonpath='{.metadata.name}' <<EOF
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      generateName: grpc-client-strain-fetch-
+      namespace: {{k8s_namespace}}
+    spec:
+      ttlSecondsAfterFinished: 200
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: grpc-client
+              image: {{ghcr_image}}:{{tag}}
+              args:
+                - strain
+                - fetch
+                - --identifier
+                - "{{identifier}}"
+    EOF
+
 # Get failure details for a job
 job-debug name k8s_config="" k8s_namespace="dev" env="dev":
     #!/usr/bin/env bash
