@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["TAG"],
+  "properties": {
+    "TAG": {
+      "type": "string",
+      "description": "The Docker image tag to use"
+    },
+    "FILTER": {
+      "type": "string",
+      "description": "Filter string for annotations (e.g. entry_id===DDB_G123;ontology===cellular_component)",
+      "default": ""
+    },
+    "LIMIT": {
+      "type": "integer",
+      "description": "Number of annotations to fetch",
+      "default": 20
+    },
+    "CURSOR": {
+      "type": "integer",
+      "description": "Offset for fetching list of annotations",
+      "default": 0
+    },
+    "ENV": {
+      "type": "string",
+      "description": "Target environment (dev, staging, production)",
+      "default": "dev",
+      "enum": ["dev", "staging", "production"]
+    },
+    "NAMESPACE": {
+      "type": "string",
+      "description": "Kubernetes namespace",
+      "default": "dev"
+    },
+    "KUBE_CFG": {
+      "type": "string",
+      "description": "Path to kubeconfig file (required for non-dev)",
+      "default": ""
+    }
+  }
+}
