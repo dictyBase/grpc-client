@@ -70,7 +70,7 @@ run-list tag filter="summary=~GoldenBraid" k8s_config="" k8s_namespace="dev" env
             - name: grpc-client
               image: {{ghcr_image}}:{{tag}}
               args:
-                - plasmid
+                - search
                 - list
                 - --filter
                 - "{{filter}}"
@@ -97,12 +97,188 @@ run-lookup tag name limit="3":
             - name: grpc-client-lookup
               image: {{ghcr_image}}:{{tag}}
               args:
-                - plasmid
+                - search
                 - lookup
                 - --name
                 - "{{name}}"
                 - --limit
                 - "{{limit}}"
+    EOF
+
+# List all plasmids without filter in Kubernetes
+run-search-list-all tag k8s_config="" k8s_namespace="dev" env="dev":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    kubeconfig=$(just resolve-kubeconfig "{{env}}" "{{k8s_config}}")
+    kubectl create -f - --kubeconfig "$kubeconfig" -o jsonpath='{.metadata.name}' <<EOF
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      generateName: grpc-client-list-all-
+      namespace: {{k8s_namespace}}
+    spec:
+      ttlSecondsAfterFinished: 200
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: grpc-client
+              image: {{ghcr_image}}:{{tag}}
+              args:
+                - search
+                - list-all
+    EOF
+
+# Fetch a single plasmid by identifier in Kubernetes
+run-search-fetch tag identifier k8s_config="" k8s_namespace="dev" env="dev":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    kubeconfig=$(just resolve-kubeconfig "{{env}}" "{{k8s_config}}")
+    kubectl create -f - --kubeconfig "$kubeconfig" -o jsonpath='{.metadata.name}' <<EOF
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      generateName: grpc-client-fetch-
+      namespace: {{k8s_namespace}}
+    spec:
+      ttlSecondsAfterFinished: 200
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: grpc-client
+              image: {{ghcr_image}}:{{tag}}
+              args:
+                - search
+                - fetch
+                - --identifier
+                - "{{identifier}}"
+    EOF
+
+# Find annotations matching a filter in Kubernetes
+run-annotation-find tag filter="" limit="20" cursor="0" k8s_config="" k8s_namespace="dev" env="dev":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    kubeconfig=$(just resolve-kubeconfig "{{env}}" "{{k8s_config}}")
+    kubectl create -f - --kubeconfig "$kubeconfig" -o jsonpath='{.metadata.name}' <<EOF
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      generateName: grpc-client-annotation-find-
+      namespace: {{k8s_namespace}}
+    spec:
+      ttlSecondsAfterFinished: 200
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: grpc-client
+              image: {{ghcr_image}}:{{tag}}
+              args:
+                - annotation
+                - find
+                - --filter
+                - "{{filter}}"
+                - --limit
+                - "{{limit}}"
+                - --cursor
+                - "{{cursor}}"
+    EOF
+
+# Find annotations by tag and ontology in Kubernetes
+run-annotation-findbytag tag ontology="" tag_name="" limit="20" cursor="0" k8s_config="" k8s_namespace="dev" env="dev":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    kubeconfig=$(just resolve-kubeconfig "{{env}}" "{{k8s_config}}")
+    kubectl create -f - --kubeconfig "$kubeconfig" -o jsonpath='{.metadata.name}' <<EOF
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      generateName: grpc-client-annotation-findbytag-
+      namespace: {{k8s_namespace}}
+    spec:
+      ttlSecondsAfterFinished: 200
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: grpc-client
+              image: {{ghcr_image}}:{{tag}}
+              args:
+                - annotation
+                - findbytag
+                - --ontology
+                - "{{ontology}}"
+                - --tag
+                - "{{tag_name}}"
+                - --limit
+                - "{{limit}}"
+                - --cursor
+                - "{{cursor}}"
+    EOF
+
+# Retrieve annotation groups by identifier in Kubernetes
+run-annotation-groupfind tag identifier ontology="" tag_name="" limit="20" cursor="0" k8s_config="" k8s_namespace="dev" env="dev":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    kubeconfig=$(just resolve-kubeconfig "{{env}}" "{{k8s_config}}")
+    kubectl create -f - --kubeconfig "$kubeconfig" -o jsonpath='{.metadata.name}' <<EOF
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      generateName: grpc-client-annotation-groupfind-
+      namespace: {{k8s_namespace}}
+    spec:
+      ttlSecondsAfterFinished: 200
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: grpc-client
+              image: {{ghcr_image}}:{{tag}}
+              args:
+                - annotation
+                - groupfind
+                - --identifier
+                - "{{identifier}}"
+                - --ontology
+                - "{{ontology}}"
+                - --tag
+                - "{{tag_name}}"
+                - --limit
+                - "{{limit}}"
+                - --cursor
+                - "{{cursor}}"
+    EOF
+
+# Delete an annotation by tag, identifier, and ontology in Kubernetes
+run-annotation-remove tag tag_name identifier ontology k8s_config="" k8s_namespace="dev" env="dev":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    kubeconfig=$(just resolve-kubeconfig "{{env}}" "{{k8s_config}}")
+    kubectl create -f - --kubeconfig "$kubeconfig" -o jsonpath='{.metadata.name}' <<EOF
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      generateName: grpc-client-annotation-remove-
+      namespace: {{k8s_namespace}}
+    spec:
+      ttlSecondsAfterFinished: 200
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: grpc-client
+              image: {{ghcr_image}}:{{tag}}
+              args:
+                - annotation
+                - remove
+                - --tag
+                - "{{tag_name}}"
+                - --identifier
+                - "{{identifier}}"
+                - --ontology
+                - "{{ontology}}"
     EOF
 
 # Wait for a Kubernetes job to complete, fail, or detect stuck pods.
