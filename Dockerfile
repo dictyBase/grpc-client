@@ -14,11 +14,11 @@ COPY cmd/ ./cmd/
 COPY internal/ ./internal/
 
 # Build binary
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /bin/goldenbraid-list ./cmd/goldenbraid-list
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /bin/grpc-client ./cmd/grpc-client
 
 # Runtime Stage
 FROM gcr.io/distroless/static-debian12
 
-COPY --from=builder /bin/goldenbraid-list /bin/goldenbraid-list
+COPY --from=builder /bin/grpc-client /bin/grpc-client
 
-ENTRYPOINT ["/bin/goldenbraid-list"]
+ENTRYPOINT ["/bin/grpc-client"]
