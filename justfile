@@ -352,6 +352,72 @@ run-strain-fetch tag identifier k8s_config="" k8s_namespace="dev" env="dev":
                 - "{{identifier}}"
     EOF
 
+# Create a feature annotation in Kubernetes
+run-annofeat-create tag id name created_by="" synonyms="" properties="" k8s_config="" k8s_namespace="dev" env="dev":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    kubeconfig=$(just resolve-kubeconfig "{{env}}" "{{k8s_config}}")
+    args=(
+        - annofeat
+        - create
+        - --id
+        - "{{id}}"
+        - --name
+        - "{{name}}"
+    )
+    if [ -n "{{created_by}}" ]; then
+        args+=(--created-by "{{created_by}}")
+    fi
+    if [ -n "{{synonyms}}" ]; then
+        args+=(--synonyms "{{synonyms}}")
+    fi
+    if [ -n "{{properties}}" ]; then
+        args+=(--properties "{{properties}}")
+    fi
+    kubectl create -f - --kubeconfig "$kubeconfig" -o jsonpath='{.metadata.name}' <<EOF
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      generateName: grpc-client-annofeat-create-
+      namespace: {{k8s_namespace}}
+    spec:
+      ttlSecondsAfterFinished: 200
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: grpc-client
+              image: {{ghcr_image}}:{{tag}}
+              args:
+    $(printf '                %s\n' "${args[@]}")
+    EOF
+
+# Retrieve a feature annotation by ID in Kubernetes
+run-annofeat-get tag id k8s_config="" k8s_namespace="dev" env="dev":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    kubeconfig=$(just resolve-kubeconfig "{{env}}" "{{k8s_config}}")
+    kubectl create -f - --kubeconfig "$kubeconfig" -o jsonpath='{.metadata.name}' <<EOF
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      generateName: grpc-client-annofeat-get-
+      namespace: {{k8s_namespace}}
+    spec:
+      ttlSecondsAfterFinished: 200
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: grpc-client
+              image: {{ghcr_image}}:{{tag}}
+              args:
+                - annofeat
+                - get
+                - --id
+                - "{{id}}"
+    EOF
+
 # Get failure details for a job
 job-debug name k8s_config="" k8s_namespace="dev" env="dev":
     #!/usr/bin/env bash
