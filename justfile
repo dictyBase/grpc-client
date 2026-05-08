@@ -1,6 +1,6 @@
-# Justfile for goldenbraid-list
+# Justfile for grpc-client
 
-name := "goldenbraid-list"
+name := "grpc-client"
 namespace := "dictybase"
 github_user := "sba964"
 platform := "linux/amd64"
@@ -59,7 +59,7 @@ run-list tag filter="summary=~GoldenBraid" k8s_config="" k8s_namespace="dev" env
     apiVersion: batch/v1
     kind: Job
     metadata:
-      generateName: goldenbraid-list-
+      generateName: grpc-client-list-
       namespace: {{k8s_namespace}}
     spec:
       ttlSecondsAfterFinished: 200
@@ -67,7 +67,7 @@ run-list tag filter="summary=~GoldenBraid" k8s_config="" k8s_namespace="dev" env
         spec:
           restartPolicy: Never
           containers:
-            - name: goldenbraid-list
+            - name: grpc-client
               image: {{ghcr_image}}:{{tag}}
               args:
                 - plasmid
@@ -85,7 +85,7 @@ run-lookup tag name limit="3":
     apiVersion: batch/v1
     kind: Job
     metadata:
-      generateName: goldenbraid-lookup-
+      generateName: grpc-client-lookup-
       namespace: dev
     spec:
       backoffLimit: 0
@@ -94,7 +94,7 @@ run-lookup tag name limit="3":
         spec:
           restartPolicy: Never
           containers:
-            - name: goldenbraid-lookup
+            - name: grpc-client-lookup
               image: {{ghcr_image}}:{{tag}}
               args:
                 - plasmid
@@ -106,12 +106,12 @@ run-lookup tag name limit="3":
     EOF
 
 # Wait for a Kubernetes job to complete, fail, or detect stuck pods.
-# Delegates to the goldenbraid-list wait-job subcommand (fp-go implementation).
+# Delegates to the grpc-client wait-job subcommand (fp-go implementation).
 wait-job name k8s_config="" k8s_namespace="dev" env="dev" timeout="60s":
     #!/usr/bin/env bash
     set -euo pipefail
     kubeconfig=$(just resolve-kubeconfig "{{env}}" "{{k8s_config}}")
-    go run ./cmd/goldenbraid-list/ wait-job --name {{name}} --namespace {{k8s_namespace}} --timeout {{timeout}} --kubeconfig "$kubeconfig"
+    go run ./cmd/grpc-client/ wait-job --name {{name}} --namespace {{k8s_namespace}} --timeout {{timeout}} --kubeconfig "$kubeconfig"
 
 # Get the logs for a specific job
 job-logs name k8s_config="" k8s_namespace="dev" env="dev":
