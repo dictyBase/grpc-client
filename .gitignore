@@ -5,3 +5,4 @@ coverage.out
 .tool-versions
 .beads/hooks/prepare-commit-msg
 grpc-client
+scratch
