@@ -34,7 +34,14 @@ steps:
     description: "Launch the Kubernetes job"
     command: |
       set -euo pipefail
-      JOB_OUTPUT=$(just run-annotation-findbytag "${TAG}" "${ONTOLOGY}" "${TAG_NAME}" "${LIMIT}" "${CURSOR}" "${KPATH}" "${NAMESPACE}" "${ENV}")
+      _tag=$(printenv TAG)
+      _ontology=$(printenv ONTOLOGY)
+      _tag_name=$(printenv TAG_NAME | tr '+' ' ')
+      _limit=$(printenv LIMIT)
+      _cursor=$(printenv CURSOR)
+      _namespace=$(printenv NAMESPACE)
+      _env=$(printenv ENV)
+      JOB_OUTPUT=$(just run-annotation-findbytag "${_tag}" "${_ontology}" "${_tag_name}" "${_limit}" "${_cursor}" "${KPATH}" "${_namespace}" "${_env}")
       echo "${JOB_OUTPUT}"
     output: JOB_NAME
 
