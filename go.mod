@@ -3,7 +3,7 @@ module github.com/dictyBase/grpc-client
 go 1.26.0
 
 require (
-	github.com/IBM/fp-go/v2 v2.3.3
+	github.com/IBM/fp-go/v2 v2.3.5
 	github.com/dictyBase/go-genproto v0.0.0-20250812211349-c01bdbe25058
 	github.com/stretchr/testify v1.11.1
 	github.com/urfave/cli/v3 v3.9.0
