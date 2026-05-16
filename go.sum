@@ -1,7 +1,7 @@
 buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1 h1:s6hzCXtND/ICdGPTMGk7C+/BFlr2Jg5GyH0NKf4XGXg=
 buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1/go.mod h1:tvtbpgaVXZX4g6Pn+AnzFycuRK3MOz5HJfEGeEllXYM=
-github.com/IBM/fp-go/v2 v2.3.3 h1:QpiSm3ZOL9qazsr8mieUcduFNGSgu8nZbK4xWqgj1p4=
-github.com/IBM/fp-go/v2 v2.3.3/go.mod h1:31fvaJMCf6hnuysAj8QLZmVaqsSK2Zaua1aBU7EQuHQ=
+github.com/IBM/fp-go/v2 v2.3.5 h1:SkcSY/KvsHmfN2Qi5JN27iLk9MRW1yWy1AIXBpa42dA=
+github.com/IBM/fp-go/v2 v2.3.5/go.mod h1:31fvaJMCf6hnuysAj8QLZmVaqsSK2Zaua1aBU7EQuHQ=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
